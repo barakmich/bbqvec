@@ -1,0 +1,8 @@
+*.test
+*.exe
+*.pt
+*.bgn
+*.pprof
+perf.data
+perf.data.old
+/build
