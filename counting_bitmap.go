@@ -7,7 +7,9 @@ import (
 )
 
 type CountingBitmap struct {
-	bms []bitmap.Bitmap
+	bms  []bitmap.Bitmap
+	and  bitmap.Bitmap
+	andb bitmap.Bitmap
 }
 
 func NewCountingBitmap(maxCount int) *CountingBitmap {
@@ -37,27 +39,33 @@ func (c *CountingBitmap) Add(v uint32) {
 	}
 }
 
-func (c *CountingBitmap) Or(in *bitmap.Bitmap) {
-	cur := in.Clone(nil)
+func (c *CountingBitmap) Or(in bitmap.Bitmap) {
+	c.and = in
+	in.Clone(&c.andb)
 	for i := 0; i < len(c.bms); i++ {
-		and := cur.Clone(nil)
-		and.And(c.bms[i])
-		c.bms[i].Or(cur)
-		cur = and
+		if i%2 == 0 {
+			if c.and.Count() == 0 {
+				break
+			}
+			c.andb.And(c.and, c.bms[i])
+			c.bms[i].Or(c.and)
+		} else {
+			if c.andb.Count() == 0 {
+				break
+			}
+			c.and.And(c.andb, c.bms[i])
+			c.bms[i].Or(c.andb)
+		}
 	}
 }
 
 // TopK may return more things than intended
-func (c *CountingBitmap) TopK(k int) []uint32 {
+func (c *CountingBitmap) TopK(k int) bitmap.Bitmap {
 	for i := len(c.bms) - 1; i >= 0; i-- {
 		if i != 0 && c.bms[i].Count() < k {
 			continue
 		}
-		arr := make([]uint32, 0, c.bms[i].Count())
-		c.bms[i].Range(func(x uint32) {
-			arr = append(arr, x)
-		})
-		return arr
+		return c.bms[i]
 	}
 	return nil
 }

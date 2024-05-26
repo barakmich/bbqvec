@@ -8,7 +8,6 @@ import (
 type Result struct {
 	Similarity float32
 	ID         ID
-	Vector     Vector
 }
 
 func (r Result) String() string {
@@ -17,104 +16,48 @@ func (r Result) String() string {
 
 type ResultSet struct {
 	inner sync.Mutex
-	set   []*Result
+	sims  []float32
+	ids   []ID
 	k     int
+	valid int
 }
 
 func NewResultSet(topK int) *ResultSet {
 	return &ResultSet{
-		k: topK,
+		k:     topK,
+		sims:  make([]float32, topK),
+		ids:   make([]ID, topK),
+		valid: 0,
 	}
 }
 
 func (rs *ResultSet) Len() int {
-	return len(rs.set)
+	return len(rs.sims)
 }
 
-func (rs *ResultSet) UnionSet(other *ResultSet) *ResultSet {
-	if rs == nil {
-		return other
-	}
-	newK := rs.k + other.k
-	outSet := make([]*Result, 0, newK)
-	lx := 0
-	rx := 0
-	for {
-		if len(rs.set) == 0 {
-			outSet = append(outSet, other.set[rx:]...)
-			break
-		}
-		if len(other.set) == 0 {
-			outSet = append(outSet, rs.set[lx:]...)
-			break
-		}
-		topl := rs.set[lx]
-		topr := other.set[rx]
-		if topl.ID == topr.ID {
-			outSet = append(outSet, topl)
-			lx++
-			rx++
-		}
-		if topl.Similarity >= topr.Similarity {
-			outSet = append(outSet, topl)
-			lx++
-		} else {
-			outSet = append(outSet, topr)
-			rx++
-		}
-	}
-	return &ResultSet{
-		set: outSet,
-		k:   newK,
-	}
-}
-
-func (rs *ResultSet) MergeSet(other *ResultSet) *ResultSet {
-	n := rs.UnionSet(other)
-
-	targetK := other.k
-	if other.k < rs.k {
-		targetK = rs.k
-	}
-	n.k = targetK
-	n.set = n.set[:min(len(n.set), n.k)]
-	return n
-}
-
-func (rs *ResultSet) ExtendResults(other []*Result) {
-	for _, v := range other {
-		rs.AddResult(v)
-	}
-}
-
-func (rs *ResultSet) ComputeRecall(baseline *ResultSet) float32 {
+func (rs *ResultSet) ComputeRecall(baseline *ResultSet, at int) float64 {
 	found := 0
-	for _, v := range baseline.set {
-		for _, w := range rs.set {
-			if v.ID == w.ID {
+	for _, v := range baseline.ids[:at] {
+		for _, w := range rs.ids[:at] {
+			if v == w {
 				found += 1
 			}
 		}
 	}
-	return float32(found) / float32(baseline.k)
+	return float64(found) / float64(at)
 }
 
 func (rs *ResultSet) String() string {
-	return fmt.Sprint(rs.set)
+	return fmt.Sprint(rs.ToSlice())
 }
 
-func (rs *ResultSet) AddResult(result *Result) bool {
+func (rs *ResultSet) AddResult(id ID, sim float32) bool {
 	// Do a quick check...
-	if len(rs.set) == rs.k {
+	if rs.valid == rs.k {
 		// Bail if the last one beats us
-		last := rs.set[len(rs.set)-1]
-		if last.Similarity > result.Similarity {
+		last := rs.sims[len(rs.sims)-1]
+		if last > sim {
 			return false
-		}
-	}
-	for _, v := range rs.set {
-		if v.ID == result.ID {
-			return true
 		}
 	}
 	rs.inner.Lock()
@@ -123,11 +66,15 @@ func (rs *ResultSet) AddResult(result *Result) bool {
 	found := false
 	for insert != rs.k {
 		// If we're building it out, then the new insertion point is at the end.
-		if len(rs.set) <= insert {
+		if rs.valid <= insert {
+			rs.valid += 1
 			found = true
 			break
 		}
-		if rs.set[insert].Similarity < result.Similarity {
+		if rs.ids[insert] == id {
+			return true
+		}
+		if rs.sims[insert] < sim {
 			found = true
 			break
 		}
@@ -136,13 +83,22 @@ func (rs *ResultSet) AddResult(result *Result) bool {
 	if !found {
 		return false
 	}
-	rs.set = append(rs.set[:insert], append([]*Result{result}, rs.set[insert:]...)...)
-	rs.set = rs.set[:min(len(rs.set), rs.k)]
+	copy(rs.sims[insert+1:], rs.sims[insert:])
+	rs.sims[insert] = sim
+	copy(rs.ids[insert+1:], rs.ids[insert:])
+	rs.ids[insert] = id
 	return true
 }
 
 func (rs *ResultSet) ToSlice() []*Result {
-	return rs.set
+	out := make([]*Result, rs.valid)
+	for i := range out {
+		out[i] = &Result{
+			Similarity: rs.sims[i],
+			ID:         rs.ids[i],
+		}
+	}
+	return out
 }
 
 func min(x, y int) int {

@@ -34,14 +34,9 @@ func (mem *MemoryBackend) PutVector(id ID, v Vector) error {
 	return nil
 }
 
-func (mem *MemoryBackend) ComputeVectorResult(vector Vector, targetID ID) *Result {
+func (mem *MemoryBackend) ComputeSimilarity(vector Vector, targetID ID) float32 {
 	target := mem.vecs[targetID]
-	sim := target.CosineSimilarity(vector)
-	return &Result{
-		ID:         targetID,
-		Similarity: sim,
-		Vector:     target,
-	}
+	return target.CosineSimilarity(vector)
 }
 
 func (mem *MemoryBackend) Info() BackendInfo {
@@ -51,6 +46,10 @@ func (mem *MemoryBackend) Info() BackendInfo {
 		NBasis:       mem.nbasis,
 		VectorCount:  len(mem.vecs),
 	}
+}
+
+func (mem *MemoryBackend) GetVector(id ID) (Vector, error) {
+	return mem.vecs[id], nil
 }
 
 func (mem *MemoryBackend) GetRandomVector() (Vector, error) {

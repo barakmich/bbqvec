@@ -2,6 +2,7 @@ package bbq
 
 import (
 	"errors"
+	"math"
 	"sync"
 
 	"github.com/kelindar/bitmap"
@@ -18,8 +19,7 @@ type VectorStore struct {
 	dimensions int
 	nbasis     int
 	bases      []Basis
-	lefts      []bitmap.Bitmap
-	rights     []bitmap.Bitmap
+	bms        []map[int]*bitmap.Bitmap
 	built      bool
 	samples    []Vector
 }
@@ -31,6 +31,7 @@ func NewVectorStore(backend VectorBackend) (*VectorStore, error) {
 		nbasis:     info.NBasis,
 		backend:    backend,
 		bases:      make([]Basis, info.NBasis),
+		bms:        make([]map[int]*bitmap.Bitmap, info.NBasis),
 	}
 	if info.HasIndexData {
 		err := v.loadFromBackend()
@@ -57,49 +58,62 @@ func (vs *VectorStore) AddVector(id ID, v Vector) error {
 	return vs.backend.PutVector(id, v)
 }
 
-func (vs *VectorStore) FindNearest(vector Vector, k int) (*ResultSet, error) {
+func (vs *VectorStore) FindNearest(vector Vector, k int, searchk int, spill int) (*ResultSet, error) {
 	if !vs.built {
 		if be, ok := vs.backend.(BuildableBackend); ok {
 			return FullTableScanSearch(be, vector, k)
 		}
 	}
-	return vs.findNearestInternal(vector, k)
+	if spill < 0 {
+		spill = 0
+	} else if spill >= vs.dimensions {
+		spill = vs.dimensions - 1
+	}
+	return vs.findNearestInternal(vector, k, searchk, spill)
 }
 
-func (vs *VectorStore) findNearestInternal(vector Vector, k int) (*ResultSet, error) {
-	bitstring := vs.getBitstring(vector)
+func (vs *VectorStore) findNearestInternal(vector Vector, k int, searchk int, spill int) (*ResultSet, error) {
 	counts := NewCountingBitmap(vs.nbasis)
-	// Follow the bitstring and combine/count the bitmaps
-	for i := 0; i < vs.nbasis; i++ {
-		if bitstring&(0x1<<i) != 0 {
-			// Is left
-			counts.Or(&vs.lefts[i])
-		} else {
-			counts.Or(&vs.rights[i])
+	buf := make([]float32, vs.dimensions)
+	maxes := make([]int, spill+1)
+	for i, basis := range vs.bases {
+		var spillClone bitmap.Bitmap
+		for x, b := range basis {
+			dot := vek32.Dot(b, vector)
+			buf[x] = dot
 		}
+		for i := 0; i < spill+1; i++ {
+			big := vek32.ArgMax(buf)
+			small := vek32.ArgMin(buf)
+			idx := 0
+			if math.Abs(float64(buf[big])) >= math.Abs(float64(buf[small])) {
+				idx = big
+			} else {
+				idx = small
+			}
+			if buf[idx] > 0.0 {
+				maxes[i] = idx + 1
+			} else {
+				maxes[i] = -(idx + 1)
+			}
+			buf[idx] = 0.0
+		}
+		for _, m := range maxes {
+			if v, ok := vs.bms[i][m]; ok {
+				spillClone.Or(*v)
+			}
+		}
+		counts.Or(spillClone)
 	}
-	// Retrieve the layer with at least K
-	elems := counts.TopK(k)
+	elems := counts.TopK(searchk)
+	//vs.log("Actual searchK is: %s", counts.String())
 	// Rerank within the reduced set
 	rs := NewResultSet(k)
-	for _, e := range elems {
-		res := vs.backend.ComputeVectorResult(vector, ID(e))
-		rs.AddResult(res)
-	}
+	elems.Range(func(x uint32) {
+		sim := vs.backend.ComputeSimilarity(vector, ID(x))
+		rs.AddResult(ID(x), sim)
+	})
 	return rs, nil
-}
-
-func (vs *VectorStore) getBitstring(vector Vector) uint64 {
-	bitstring := uint64(0)
-	for i, basis := range vs.bases {
-		last := basis[len(basis)-1]
-		final := vs.reduceVector(vector, vs.dimensions-1, basis)
-		if vek32.Dot(last, final) > 0 {
-			// Is Left
-			bitstring |= 0x1 << i
-		}
-	}
-	return bitstring
 }
 
 func (vs *VectorStore) BuildIndex() error {
@@ -150,16 +164,12 @@ func (vs *VectorStore) saveAll() error {
 	if err != nil {
 		return err
 	}
-	for i, bm := range vs.lefts {
-		err = be.SaveBitmap(true, i, bm)
-		if err != nil {
-			return err
-		}
-	}
-	for i, bm := range vs.rights {
-		err = be.SaveBitmap(false, i, bm)
-		if err != nil {
-			return err
+	for b, dimmap := range vs.bms {
+		for i, v := range dimmap {
+			err = be.SaveBitmap(b, i, *v)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -187,35 +197,44 @@ func (vs *VectorStore) makeBasis(be BuildableBackend) error {
 
 func (vs *VectorStore) makeBitmaps(be BuildableBackend) error {
 	vs.log("Making bitmaps")
-	lefts := make([]bitmap.Bitmap, vs.nbasis)
-	rights := make([]bitmap.Bitmap, vs.nbasis)
 	var wg sync.WaitGroup
 	errs := make([]error, vs.nbasis)
 	for n, basis := range vs.bases {
 		wg.Add(1)
 		go func(n int, basis Basis, wg *sync.WaitGroup) {
-			var left bitmap.Bitmap
-			var right bitmap.Bitmap
-			last := basis[len(basis)-1]
-			err := be.ForEachVector(func(i ID, v Vector) error {
+			out := make(map[int]*bitmap.Bitmap)
+			buf := make([]float32, vs.dimensions)
+			be.ForEachVector(func(i ID, v Vector) error {
 				if i != 0 && i%10000 == 0 {
-					vs.log("Completed %d for basis %d", i, n)
+					vs.log("Completed %d of basis %d", i, n)
 				}
-				final := vs.reduceVector(v, vs.dimensions-1, basis)
-				if vek32.Dot(last, final) > 0 {
-					left.Set(uint32(i))
+				for x, b := range basis {
+					dot := vek32.Dot(b, v)
+					buf[x] = dot
+				}
+				big := vek32.ArgMax(buf)
+				small := vek32.ArgMin(buf)
+				idx := 0
+				trueMax := 0
+				if math.Abs(float64(buf[big])) >= math.Abs(float64(buf[small])) {
+					idx = big
 				} else {
-					right.Set(uint32(i))
+					idx = small
 				}
+				if buf[idx] > 0.0 {
+					trueMax = idx + 1
+				} else {
+					trueMax = -(idx + 1)
+				}
+
+				if _, ok := out[trueMax]; !ok {
+					out[trueMax] = new(bitmap.Bitmap)
+				}
+				out[trueMax].Set(uint32(i))
 				return nil
 			})
-			if err != nil {
-				errs[n] = err
-				return
-			}
-			lefts[n] = left
-			rights[n] = right
-			vs.log("Finished bitmaps for basis %d. Lefts: %d, Rights: %d", n, left.Count(), right.Count())
+			vs.bms[n] = out
+			vs.log("Finished bitmaps for basis %d. Approx %d per face", n, out[1].Count())
 			wg.Done()
 		}(n, basis, &wg)
 	}
@@ -225,8 +244,6 @@ func (vs *VectorStore) makeBitmaps(be BuildableBackend) error {
 			return err
 		}
 	}
-	vs.lefts = lefts
-	vs.rights = rights
 	vs.log("Completed bitmap generation")
 	return nil
 }
@@ -255,17 +272,20 @@ func (vs *VectorStore) loadFromBackend() error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i < vs.nbasis; i++ {
-		bm, err := be.LoadBitmap(true, i)
-		if err != nil {
-			return err
+	for b := 0; b < vs.nbasis; b++ {
+		dimmap := make(map[int]*bitmap.Bitmap)
+		for i := 1; i <= vs.dimensions; i++ {
+			bm, err := be.LoadBitmap(b, i)
+			if err != nil {
+				return err
+			}
+			dimmap[i] = &bm
+			bm, err = be.LoadBitmap(b, -i)
+			if err != nil {
+				return err
+			}
+			dimmap[-i] = &bm
 		}
-		vs.lefts = append(vs.lefts, bm)
-		bm, err = be.LoadBitmap(false, i)
-		if err != nil {
-			return err
-		}
-		vs.rights = append(vs.rights, bm)
 	}
 	vs.built = true
 	return nil
