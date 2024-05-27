@@ -3,7 +3,7 @@ use std::cmp::min;
 use anyhow::{anyhow, Result};
 
 use crate::{
-    backend::{BackendInfo, BuildableBackend, CompilingBackend, IndexableBackend, VectorBackend},
+    backend::{BackendInfo, BuildableBackend, IndexableBackend, VectorBackend},
     Bitmap, Vector, ID,
 };
 
@@ -26,8 +26,7 @@ impl MemoryBackend {
 impl VectorBackend for MemoryBackend {
     type Buildable = Self;
     type Indexable = Self;
-    // When ! comes out of nightly, that's what I want here
-    type Compiling = Self;
+    type CompiledBackend = Self;
 
     fn put_vector(&mut self, id: crate::ID, v: &Vector) -> Result<()> {
         if v.len() != self.dimensions {
@@ -61,7 +60,11 @@ impl VectorBackend for MemoryBackend {
         }
     }
 
-    fn as_buildable_backend(&mut self) -> Option<&mut Self::Buildable> {
+    fn as_buildable_backend_mut(&mut self) -> Option<&mut Self::Buildable> {
+        Some(self)
+    }
+
+    fn as_buildable_backend(&self) -> Option<&Self::Buildable> {
         Some(self)
     }
 
@@ -69,8 +72,8 @@ impl VectorBackend for MemoryBackend {
         Some(self)
     }
 
-    fn as_compiling_backend(&mut self) -> Option<&mut Self::Compiling> {
-        None
+    fn compile(self) -> Result<Self::CompiledBackend> {
+        Ok(self)
     }
 }
 
@@ -111,11 +114,5 @@ impl IndexableBackend for MemoryBackend {
 
     fn load_bitmap<T: Bitmap>(&mut self, _basis: usize, _index: usize) -> Result<T> {
         todo!()
-    }
-}
-
-impl CompilingBackend for MemoryBackend {
-    fn compile(&mut self) -> Result<()> {
-        panic!("unreachable")
     }
 }

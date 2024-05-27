@@ -21,7 +21,6 @@ type VectorStore struct {
 	bases      []Basis
 	bms        []map[int]*bitmap.Bitmap
 	built      bool
-	samples    []Vector
 }
 
 func NewVectorStore(backend VectorBackend) (*VectorStore, error) {

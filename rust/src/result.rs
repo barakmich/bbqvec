@@ -1,7 +1,7 @@
 use crate::ID;
 
 #[derive(Debug)]
-pub struct Result {
+pub struct SearchResult {
     pub similarity: f32,
     pub id: ID,
 }
@@ -75,11 +75,11 @@ impl ResultSet {
     }
 
     // Consumes the ResultSet and turns it into an ordered list of results
-    pub fn into_iter(self) -> impl Iterator<Item = Result> {
+    fn into_iter(self) -> impl Iterator<Item = SearchResult> {
         self.sims
             .into_iter()
-            .zip(self.ids.into_iter())
-            .map(|(sim, id)| Result {
+            .zip(self.ids)
+            .map(|(sim, id)| SearchResult {
                 similarity: sim,
                 id,
             })

@@ -1,6 +1,9 @@
-use std::ops::{BitAndAssign, BitOrAssign};
+use std::{
+    mem::size_of,
+    ops::{BitAndAssign, BitOrAssign},
+};
 
-use backend::{BuildableBackend, VectorBackend};
+use backend::BuildableBackend;
 use roaring::RoaringBitmap;
 
 pub mod backend;
@@ -10,8 +13,10 @@ pub mod result;
 pub(crate) mod spaces;
 pub(crate) mod unaligned_f32;
 pub(crate) mod vector;
+pub(crate) mod vector_store;
 
 pub use backend_memory::MemoryBackend;
+pub use vector_store::VectorStore;
 
 use anyhow::Result;
 
@@ -28,6 +33,7 @@ pub trait Bitmap: BitAndAssign + BitOrAssign + Default + Clone + serde::Serializ
     fn iter(&self) -> impl Iterator<Item = usize>;
     fn and(&mut self, rhs: &Self);
     fn or(&mut self, rhs: &Self);
+    fn estimate_size(&self) -> usize;
 }
 
 impl Bitmap for roaring::RoaringBitmap {
@@ -51,6 +57,9 @@ impl Bitmap for roaring::RoaringBitmap {
     }
     fn or(&mut self, rhs: &Self) {
         self.bitor_assign(rhs)
+    }
+    fn estimate_size(&self) -> usize {
+        self.serialized_size()
     }
 }
 
@@ -82,10 +91,13 @@ impl Bitmap for BitVec {
     fn or(&mut self, rhs: &Self) {
         self.bitor_assign(rhs)
     }
+    fn estimate_size(&self) -> usize {
+        self.as_raw_slice().len() * size_of::<usize>()
+    }
 }
 
-pub fn full_table_scan_search<B: BuildableBackend + VectorBackend>(
-    backend: B,
+pub fn full_table_scan_search<B: BuildableBackend>(
+    backend: &B,
     target: Vector,
     k: usize,
 ) -> Result<ResultSet> {
