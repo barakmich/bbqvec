@@ -74,14 +74,13 @@ impl ResultSet {
         self.sims.truncate(self.k);
     }
 
-    // Consumes the ResultSet and turns it into an ordered list of results
-    fn into_iter(self) -> impl Iterator<Item = SearchResult> {
+    fn iter(&self) -> impl Iterator<Item = SearchResult> + '_ {
         self.sims
-            .into_iter()
-            .zip(self.ids)
+            .iter()
+            .zip(self.ids.iter())
             .map(|(sim, id)| SearchResult {
-                similarity: sim,
-                id,
+                similarity: *sim,
+                id: *id,
             })
     }
 }
