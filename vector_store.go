@@ -109,11 +109,19 @@ func (vs *VectorStore) findNearestInternal(vector Vector, k int, searchk int, sp
 	//vs.log("Actual searchK is: %s", counts.String())
 	// Rerank within the reduced set
 	rs := NewResultSet(k)
+	var err error
+
 	elems.Range(func(x uint32) {
-		sim := vs.backend.ComputeSimilarity(vector, ID(x))
+		// things that take closures should really return error, so that it can abort...
+		if err != nil {
+			return
+		}
+		var sim float32
+		sim, err = vs.backend.ComputeSimilarity(vector, ID(x))
+		// On err, this will be the zero value of sum (but that's ok, we're going down)
 		rs.AddResult(ID(x), sim)
 	})
-	return rs, nil
+	return rs, err
 }
 
 func (vs *VectorStore) BuildIndex() error {

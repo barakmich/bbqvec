@@ -4,7 +4,7 @@ import "github.com/kelindar/bitmap"
 
 type VectorBackend interface {
 	PutVector(id ID, v Vector) error
-	ComputeSimilarity(targetVector Vector, targetID ID) float32
+	ComputeSimilarity(targetVector Vector, targetID ID) (float32, error)
 	Info() BackendInfo
 }
 
@@ -37,7 +37,10 @@ type BackendInfo struct {
 func FullTableScanSearch(b BuildableBackend, target Vector, k int) (*ResultSet, error) {
 	rs := NewResultSet(k)
 	err := b.ForEachVector(func(id ID, v Vector) error {
-		sim := b.ComputeSimilarity(target, id)
+		sim, err := b.ComputeSimilarity(target, id)
+		if err != nil {
+			return err
+		}
 		rs.AddResult(id, sim)
 		return nil
 	})

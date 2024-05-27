@@ -1,0 +1,16 @@
+[package]
+name = "bbqvec"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.86"
+bitvec = {version = "1", features = ["serde"]}
+bytemuck = {version = "1.16.0", features = ["derive", "extern_crate_alloc"]}
+byteorder = "1.5.0"
+rand = "0.8.5"
+roaring = {version = "0.10.4", features = ["serde"]}
+serde = "1.0.203"
+thiserror = "1.0.61"

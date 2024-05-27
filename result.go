@@ -100,10 +100,3 @@ func (rs *ResultSet) ToSlice() []*Result {
 	}
 	return out
 }
-
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}

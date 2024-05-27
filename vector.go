@@ -49,5 +49,7 @@ func NewRandVector(dim int, rng *rand.Rand) Vector {
 			out[i] = float32(rand.NormFloat64())
 		}
 	}
+	factor := vek32.Norm(out)
+	vek32.DivNumber_Inplace(out, factor)
 	return out
 }

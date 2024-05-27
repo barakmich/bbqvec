@@ -30,15 +30,6 @@ func (c *CountingBitmap) String() string {
 	return fmt.Sprint(c.cardinalities())
 }
 
-func (c *CountingBitmap) Add(v uint32) {
-	for i := 0; i < len(c.bms); i++ {
-		if !c.bms[i].Contains(v) {
-			c.bms[i].Set(v)
-			break
-		}
-	}
-}
-
 func (c *CountingBitmap) Or(in bitmap.Bitmap) {
 	c.and = in
 	in.Clone(&c.andb)
