@@ -1,7 +1,4 @@
-use std::{
-    mem::size_of,
-    ops::{BitAndAssign, BitOrAssign},
-};
+use std::ops::{BitAndAssign, BitOrAssign};
 
 use backend::BuildableBackend;
 use roaring::RoaringBitmap;
@@ -26,7 +23,7 @@ pub type Vector = Vec<f32>;
 pub type ID = u64;
 pub type Basis = Vec<Vector>;
 
-pub trait Bitmap: BitAndAssign + BitOrAssign + Default + Clone + serde::Serialize {
+pub trait Bitmap: BitAndAssign + BitOrAssign + Default + Clone + serde::Serialize + Send {
     fn new() -> Self;
     fn count(&self) -> usize;
     fn add(&mut self, id: ID);
@@ -92,7 +89,7 @@ impl Bitmap for BitVec {
         self.bitor_assign(rhs)
     }
     fn estimate_size(&self) -> usize {
-        self.as_raw_slice().len() * size_of::<usize>()
+        std::mem::size_of_val(self.as_raw_slice())
     }
 }
 

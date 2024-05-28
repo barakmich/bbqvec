@@ -2,7 +2,7 @@ use crate::Vector;
 
 #[inline(always)]
 pub(crate) fn project_to_plane(vec: &mut Vector, normal: &Vector) {
-    let dot = dot_product(vec.as_ref(), normal);
+    let dot = dot_product(vec, normal);
     for (n, v) in normal.iter().zip(vec.iter_mut()) {
         *v -= n * dot
     }

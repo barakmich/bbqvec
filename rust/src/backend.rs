@@ -19,14 +19,14 @@ pub trait VectorBackend {
     fn info(&self) -> BackendInfo;
     fn as_buildable_backend(&self) -> Option<&Self::Buildable>;
     fn as_buildable_backend_mut(&mut self) -> Option<&mut Self::Buildable>;
-    fn as_indexable_backend<T: Bitmap>(&mut self) -> Option<&mut Self::Indexable>;
+    fn as_indexable_backend(&mut self) -> Option<&mut Self::Indexable>;
     fn compile(self) -> Result<Self::CompiledBackend>;
 }
 
 pub trait BuildableBackend: VectorBackend {
     fn get_vector(&self, id: ID) -> Result<Vector>;
     fn get_random_vector<R: rand::Rng>(&self, rng: R) -> Result<Vector>;
-    fn iter(&self) -> impl Iterator<Item = (ID, &Vector)>;
+    fn iter(&self) -> impl Iterator<Item = (ID, &Vector)> + Sync;
 }
 
 pub trait IndexableBackend: VectorBackend {

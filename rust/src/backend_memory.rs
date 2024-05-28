@@ -68,8 +68,8 @@ impl VectorBackend for MemoryBackend {
         Some(self)
     }
 
-    fn as_indexable_backend<T: crate::Bitmap>(&mut self) -> Option<&mut Self::Indexable> {
-        Some(self)
+    fn as_indexable_backend(&mut self) -> Option<&mut Self::Indexable> {
+        None
     }
 
     fn compile(self) -> Result<Self::CompiledBackend> {
@@ -90,7 +90,7 @@ impl BuildableBackend for MemoryBackend {
             .or_else(|_| self.get_random_vector(rng))
     }
 
-    fn iter(&self) -> impl Iterator<Item = (ID, &Vector)> {
+    fn iter(&self) -> impl Iterator<Item = (ID, &Vector)> + Sync {
         self.vecs
             .iter()
             .enumerate()
