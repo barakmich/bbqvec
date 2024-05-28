@@ -11,8 +11,13 @@ argminmax = {version = "0.6.2", default-features = false, features = ["float"]}
 bitvec = {version = "1", features = ["serde"]}
 bytemuck = {version = "1.16.0", features = ["derive", "extern_crate_alloc"]}
 byteorder = "1.5.0"
+criterion = "0.5.1"
 rand = "0.8.5"
 rayon = "1.10.0"
 roaring = {version = "0.10.4", features = ["serde"]}
 serde = "1.0.203"
 thiserror = "1.0.61"
+
+[[bench]]
+name = "micro"
+harness = false

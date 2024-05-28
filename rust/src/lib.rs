@@ -15,6 +15,9 @@ pub(crate) mod vector_store;
 pub use backend_memory::MemoryBackend;
 pub use vector_store::VectorStore;
 
+mod helpers;
+pub use helpers::*;
+
 use anyhow::Result;
 
 pub use result::ResultSet;
