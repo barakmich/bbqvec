@@ -9,7 +9,7 @@ pub(crate) mod counting_bitmap;
 pub mod result;
 pub(crate) mod spaces;
 pub(crate) mod unaligned_f32;
-pub(crate) mod vector;
+pub mod vector;
 pub(crate) mod vector_store;
 
 pub use backend_memory::MemoryBackend;
