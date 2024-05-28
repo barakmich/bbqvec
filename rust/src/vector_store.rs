@@ -4,6 +4,7 @@ use rayon::prelude::*;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
+    time::Instant,
 };
 
 use crate::{
@@ -13,13 +14,19 @@ use crate::{
     Basis, Bitmap, ResultSet, Vector, ID,
 };
 
-pub struct VectorStore<E: VectorBackend, B: Bitmap = crate::BitVec> {
+pub struct VectorStore<E: VectorBackend, B: Bitmap> {
     backend: E,
     dimensions: usize,
     n_basis: usize,
     bases: Option<Vec<Basis>>,
     // If we ever have more than INT_MAX_32 dimensions, I quit.
     bitmaps: Option<Vec<HashMap<i32, B>>>,
+}
+
+impl<E: VectorBackend> VectorStore<E, crate::BitVec> {
+    pub fn new_dense_bitmap(backend: E) -> Result<Self> {
+        VectorStore::new(backend)
+    }
 }
 
 impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
@@ -52,9 +59,19 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
         }
     }
 
+    pub fn add_vector_iter<'a>(
+        &mut self,
+        iter: impl Iterator<Item = (ID, &'a Vector)>,
+    ) -> Result<()> {
+        for (id, vec) in iter {
+            self.add_vector(id, vec)?;
+        }
+        Ok(())
+    }
+
     pub fn find_nearest(
         &self,
-        target: Vector,
+        target: &Vector,
         k: usize,
         search_k: usize,
         spill: usize,
@@ -77,7 +94,7 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
     #[inline(always)]
     fn find_nearest_internal(
         &self,
-        target: Vector,
+        target: &Vector,
         k: usize,
         search_k: usize,
         spill: usize,
@@ -89,7 +106,7 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
             let mut spill_into = B::new();
             proj.clear();
             for b in basis {
-                proj.push(dot_product(&target, b))
+                proj.push(dot_product(target, b))
             }
             for _s in 0..(spill + 1) {
                 let face_idx = find_face_idx(&proj);
@@ -104,7 +121,7 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
             .top_k(search_k)
             .ok_or(anyhow!("Didn't find a counting layer?"))?;
         for id in elems.iter_elems() {
-            let sim = self.backend.compute_similarity(&target, id)?;
+            let sim = self.backend.compute_similarity(target, id)?;
             rs.add_result(id, sim);
         }
         Ok(rs)
@@ -120,8 +137,12 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
             .as_buildable_backend()
             .ok_or(anyhow!("Backend not buildable"))?;
 
+        let mut start = Instant::now();
         let bases = Self::make_basis(be, self.n_basis, self.dimensions)?;
+        println!("made basis {:?}", Instant::now().duration_since(start));
+        start = Instant::now();
         let bitmaps = Self::make_bitmaps(be, &bases)?;
+        println!("made bitmaps {:?}", Instant::now().duration_since(start));
         self.save_all(&bases, &bitmaps)?;
         let backend = self.backend.compile()?;
         Ok(VectorStore {

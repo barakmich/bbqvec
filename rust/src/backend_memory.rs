@@ -33,7 +33,7 @@ impl VectorBackend for MemoryBackend {
             return Err(anyhow!("dimensions don't match"));
         }
         let uid = id as usize;
-        if self.vecs.len() < uid {
+        if self.vecs.len() <= uid {
             if self.vecs.capacity() == uid {
                 self.vecs.reserve(min(self.vecs.capacity(), 1024 * 1024))
             }

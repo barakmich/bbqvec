@@ -7,9 +7,8 @@ import (
 )
 
 type CountingBitmap struct {
-	bms  []bitmap.Bitmap
-	and  bitmap.Bitmap
-	andb bitmap.Bitmap
+	bms []bitmap.Bitmap
+	buf bitmap.Bitmap
 }
 
 func NewCountingBitmap(maxCount int) *CountingBitmap {
@@ -31,21 +30,14 @@ func (c *CountingBitmap) String() string {
 }
 
 func (c *CountingBitmap) Or(in bitmap.Bitmap) {
-	c.and = in
-	in.Clone(&c.andb)
+	in.Clone(&c.buf)
+	cur := c.buf
 	for i := 0; i < len(c.bms); i++ {
-		if i%2 == 0 {
-			if c.and.Count() == 0 {
-				break
-			}
-			c.andb.And(c.and, c.bms[i])
-			c.bms[i].Or(c.and)
-		} else {
-			if c.andb.Count() == 0 {
-				break
-			}
-			c.and.And(c.andb, c.bms[i])
-			c.bms[i].Or(c.andb)
+		c.bms[i].Xor(cur)
+		cur.AndNot(c.bms[i])
+		c.bms[i].Or(cur)
+		if cur.Count() == 0 {
+			break
 		}
 	}
 }

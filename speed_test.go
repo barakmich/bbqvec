@@ -11,7 +11,31 @@ var (
 	testvecs = flag.Int("testvectors", 1000, "Number of vectors to generate")
 	dim      = flag.Int("dim", 256, "Dimension of generated vectors")
 	nBasis   = flag.Int("bases", 30, "Number of basis sets")
+	searchk  = flag.Int("searchk", 1000, "SearchK")
+	spill    = flag.Int("spill", 16, "Spill")
 )
+
+func BenchmarkMemoryStore(b *testing.B) {
+	vecs := buildVectors(*nVectors, *dim, nil)
+
+	be := NewMemoryBackend(*dim, *nBasis)
+	store, err := NewVectorStore(be)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	for i, v := range vecs {
+		store.AddVector(ID(i), v)
+	}
+
+	store.BuildIndex()
+
+	v := NewRandVector(*dim, nil)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		store.FindNearest(v, 20, *searchk, *spill)
+	}
+}
 
 func BenchmarkParameters(b *testing.B) {
 	//First, build the thing
@@ -46,11 +70,6 @@ func BenchmarkParameters(b *testing.B) {
 }
 
 func runBenchmark(b *testing.B, searchk, spill int, store *VectorStore) {
-	v := NewRandVector(*dim, nil)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		store.FindNearest(v, 20, searchk, spill)
-	}
 }
 
 func benchQuality(b *testing.B, searchk, spill int, store *VectorStore, vecs []Vector, res []*ResultSet) {

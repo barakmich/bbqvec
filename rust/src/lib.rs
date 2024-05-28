@@ -1,4 +1,4 @@
-use std::ops::{BitAndAssign, BitOrAssign};
+use std::ops::{BitAndAssign, BitOrAssign, BitXorAssign, SubAssign};
 
 use backend::BuildableBackend;
 use roaring::RoaringBitmap;
@@ -26,13 +26,14 @@ pub type Vector = Vec<f32>;
 pub type ID = u64;
 pub type Basis = Vec<Vector>;
 
-pub trait Bitmap: BitAndAssign + BitOrAssign + Default + Clone + serde::Serialize + Send {
+pub trait Bitmap: std::fmt::Debug + Default + Clone + serde::Serialize + Send {
     fn new() -> Self;
     fn count(&self) -> usize;
     fn add(&mut self, id: ID);
     fn iter_elems(&self) -> impl Iterator<Item = ID>;
-    fn and(&mut self, rhs: &Self);
+    fn and_not(&mut self, rhs: &Self);
     fn or(&mut self, rhs: &Self);
+    fn xor(&mut self, rhs: &Self);
     fn estimate_size(&self) -> usize;
 }
 
@@ -52,11 +53,14 @@ impl Bitmap for roaring::RoaringBitmap {
     fn iter_elems(&self) -> impl Iterator<Item = ID> {
         self.iter().map(|x| x as ID)
     }
-    fn and(&mut self, rhs: &Self) {
-        self.bitand_assign(rhs)
+    fn and_not(&mut self, rhs: &Self) {
+        self.sub_assign(rhs)
     }
     fn or(&mut self, rhs: &Self) {
         self.bitor_assign(rhs)
+    }
+    fn xor(&mut self, rhs: &Self) {
+        self.bitxor_assign(rhs)
     }
     fn estimate_size(&self) -> usize {
         self.serialized_size()
@@ -75,8 +79,8 @@ impl Bitmap for BitVec {
     }
 
     fn add(&mut self, id: ID) {
-        if self.len() < id as usize {
-            self.resize(id as usize, false);
+        if self.len() <= id as usize {
+            self.resize((id + 1) as usize, false)
         }
         self.set(id as usize, true)
     }
@@ -85,12 +89,22 @@ impl Bitmap for BitVec {
         self.iter_ones().map(|x| x as ID)
     }
 
-    fn and(&mut self, rhs: &Self) {
-        self.bitand_assign(rhs)
+    #[inline]
+    fn and_not(&mut self, rhs: &Self) {
+        for elem in self.as_raw_mut_slice().iter_mut().zip(rhs.as_raw_slice()) {
+            *elem.0 &= !elem.1
+        }
     }
 
     fn or(&mut self, rhs: &Self) {
+        if self.len() < rhs.len() {
+            self.resize(rhs.len(), false)
+        }
         self.bitor_assign(rhs)
+    }
+
+    fn xor(&mut self, rhs: &Self) {
+        self.bitxor_assign(rhs)
     }
 
     fn estimate_size(&self) -> usize {
@@ -100,12 +114,12 @@ impl Bitmap for BitVec {
 
 pub fn full_table_scan_search<B: BuildableBackend>(
     backend: &B,
-    target: Vector,
+    target: &Vector,
     k: usize,
 ) -> Result<ResultSet> {
     let mut set = ResultSet::new(k);
     for (id, _) in backend.iter_vecs() {
-        let sim = backend.compute_similarity(&target, id)?;
+        let sim = backend.compute_similarity(target, id)?;
         set.add_result(id, sim);
     }
     Ok(set)

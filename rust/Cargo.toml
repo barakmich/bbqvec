@@ -19,5 +19,5 @@ serde = "1.0.203"
 thiserror = "1.0.61"
 
 [[bench]]
-name = "micro"
+name = "main_benchmark"
 harness = false
