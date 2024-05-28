@@ -27,7 +27,7 @@ pub trait Bitmap: BitAndAssign + BitOrAssign + Default + Clone + serde::Serializ
     fn new() -> Self;
     fn count(&self) -> usize;
     fn add(&mut self, id: ID);
-    fn iter(&self) -> impl Iterator<Item = usize>;
+    fn iter_elems(&self) -> impl Iterator<Item = ID>;
     fn and(&mut self, rhs: &Self);
     fn or(&mut self, rhs: &Self);
     fn estimate_size(&self) -> usize;
@@ -46,8 +46,8 @@ impl Bitmap for roaring::RoaringBitmap {
         self.insert(id as u32);
     }
 
-    fn iter(&self) -> impl Iterator<Item = usize> {
-        self.iter().map(|x| x as usize)
+    fn iter_elems(&self) -> impl Iterator<Item = ID> {
+        self.iter().map(|x| x as ID)
     }
     fn and(&mut self, rhs: &Self) {
         self.bitand_assign(rhs)
@@ -78,9 +78,10 @@ impl Bitmap for BitVec {
         self.set(id as usize, true)
     }
 
-    fn iter(&self) -> impl Iterator<Item = usize> {
-        self.iter_ones()
+    fn iter_elems(&self) -> impl Iterator<Item = ID> {
+        self.iter_ones().map(|x| x as ID)
     }
+
     fn and(&mut self, rhs: &Self) {
         self.bitand_assign(rhs)
     }
@@ -88,6 +89,7 @@ impl Bitmap for BitVec {
     fn or(&mut self, rhs: &Self) {
         self.bitor_assign(rhs)
     }
+
     fn estimate_size(&self) -> usize {
         std::mem::size_of_val(self.as_raw_slice())
     }
@@ -99,7 +101,7 @@ pub fn full_table_scan_search<B: BuildableBackend>(
     k: usize,
 ) -> Result<ResultSet> {
     let mut set = ResultSet::new(k);
-    for (id, _) in backend.iter() {
+    for (id, _) in backend.iter_vecs() {
         let sim = backend.compute_similarity(&target, id)?;
         set.add_result(id, sim);
     }

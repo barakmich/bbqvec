@@ -83,14 +83,14 @@ impl BuildableBackend for MemoryBackend {
         elem.clone().ok_or(anyhow!("vector not found"))
     }
 
-    fn get_random_vector<R: rand::Rng>(&self, mut rng: R) -> Result<Vector> {
+    fn get_random_vector<R: rand::Rng>(&self, rng: &mut R) -> Result<Vector> {
         // This assumes a rather dense vector set... otherwise, use an ID lookup map
         let x: usize = rng.gen_range(0..self.vecs.len());
         self.get_vector(x as ID)
             .or_else(|_| self.get_random_vector(rng))
     }
 
-    fn iter(&self) -> impl Iterator<Item = (ID, &Vector)> + Sync {
+    fn iter_vecs(&self) -> impl Iterator<Item = (ID, &Vector)> {
         self.vecs
             .iter()
             .enumerate()

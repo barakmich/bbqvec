@@ -8,7 +8,15 @@ pub struct CountingBitmap<B: Bitmap> {
 }
 
 impl<B: Bitmap> CountingBitmap<B> {
-    pub fn or(mut self, rhs: &B) {
+    pub fn new(size: usize) -> Self {
+        Self {
+            bitmaps: vec![B::new(); size],
+            a_buf: B::new(),
+            b_buf: B::new(),
+        }
+    }
+
+    pub fn or(&mut self, rhs: &B) {
         rhs.clone_into(&mut self.b_buf);
         let mut cur = rhs;
         let mut next = &mut self.b_buf;
@@ -26,7 +34,7 @@ impl<B: Bitmap> CountingBitmap<B> {
         }
     }
 
-    pub fn top_k(&mut self, search_k: usize) -> Option<&B> {
+    pub fn top_k(&self, search_k: usize) -> Option<&B> {
         self.bitmaps.iter().rev().find(|x| x.count() > search_k)
     }
 }

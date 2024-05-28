@@ -1,10 +1,14 @@
 use anyhow::{anyhow, Result};
 use argminmax::ArgMinMax;
 use rayon::prelude::*;
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use crate::{
     backend::{BuildableBackend, VectorBackend},
+    counting_bitmap::CountingBitmap,
     vector::dot_product,
     Basis, Bitmap, ResultSet, Vector, ID,
 };
@@ -78,7 +82,31 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
         search_k: usize,
         spill: usize,
     ) -> Result<ResultSet> {
-        let rs = ResultSet::new(k);
+        let mut rs = ResultSet::new(k);
+        let mut bs = CountingBitmap::<B>::new(self.bases.as_ref().unwrap().len());
+        let mut proj: Vec<f32> = Vec::with_capacity(self.dimensions);
+        for (i, basis) in self.bases.as_ref().unwrap().iter().enumerate() {
+            let mut spill_into = B::new();
+            proj.clear();
+            for b in basis {
+                proj.push(dot_product(&target, b))
+            }
+            for _s in 0..(spill + 1) {
+                let face_idx = find_face_idx(&proj);
+                if let Some(bm) = self.bitmaps.as_ref().unwrap()[i].get(&face_idx) {
+                    spill_into.or(bm);
+                };
+                proj[face_idx.unsigned_abs() as usize] = 0.0
+            }
+            bs.or(&spill_into);
+        }
+        let elems = bs
+            .top_k(search_k)
+            .ok_or(anyhow!("Didn't find a counting layer?"))?;
+        for id in elems.iter_elems() {
+            let sim = self.backend.compute_similarity(&target, id)?;
+            rs.add_result(id, sim);
+        }
         Ok(rs)
     }
 
@@ -94,7 +122,7 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
 
         let bases = Self::make_basis(be, self.n_basis, self.dimensions)?;
         let bitmaps = Self::make_bitmaps(be, &bases)?;
-        (&mut self).save_all(&bases, &bitmaps)?;
+        self.save_all(&bases, &bitmaps)?;
         let backend = self.backend.compile()?;
         Ok(VectorStore {
             backend,
@@ -119,28 +147,20 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
     }
 
     fn make_bitmaps(be: &E::Buildable, bases: &[Basis]) -> Result<Vec<HashMap<i32, B>>> {
-        let prep: Vec<_> = bases.iter().map(|b| (b.clone(), be.iter())).collect();
+        let arc_be = Arc::new(Mutex::new(be));
+        let prep: Vec<_> = bases.iter().map(|b| (b.clone(), arc_be.clone())).collect();
 
-        prep.into_par_iter()
-            .map(|(b, it)| {
+        prep.par_iter()
+            .map(|(b, arc)| {
                 let mut out: HashMap<i32, B> = HashMap::new();
+                let it = { arc.lock().unwrap().iter_vecs() };
                 it.for_each(|(id, vec)| {
                     let mut proj = Vec::new();
                     for basis in b {
-                        proj.push(dot_product(vec, &basis));
+                        proj.push(dot_product(vec, basis));
                     }
-                    let (min_idx, max_idx) = proj.argminmax();
-                    let idx = if proj[max_idx].abs() >= proj[min_idx].abs() {
-                        max_idx as i32
-                    } else {
-                        min_idx as i32
-                    };
-                    let face_num = if proj[idx as usize] > 0.0 {
-                        idx + 1
-                    } else {
-                        -(idx + 1)
-                    };
-                    out.entry(face_num).or_default().add(id);
+                    let face_idx = find_face_idx(&proj);
+                    out.entry(face_idx).or_default().add(id);
                 });
                 Ok(out)
             })
@@ -149,7 +169,7 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
             .collect()
     }
 
-    fn save_all(&mut self, _bases: &Vec<Basis>, _bitmaps: &Vec<HashMap<i32, B>>) -> Result<()> {
+    fn save_all(&mut self, _bases: &[Basis], _bitmaps: &[HashMap<i32, B>]) -> Result<()> {
         match self.backend.as_indexable_backend() {
             Some(_) => todo!(),
             None => Ok(()),
@@ -157,6 +177,54 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
     }
 }
 
+const VECTORS_TO_CONSIDER: usize = 200;
+
 fn create_split(i: usize, basis: &Basis, be: &impl BuildableBackend) -> Result<Vector> {
-    todo!()
+    // First, find a random vector in the set
+    let mut p = pick_random_vec(i, basis, be)?;
+    let (mut q, _dist) = (0..VECTORS_TO_CONSIDER).try_fold(
+        (pick_random_vec(i, basis, be)?, -2.0),
+        |(vector, distance), _| {
+            let candidate = pick_random_vec(i, basis, be)?;
+            let dist = crate::vector::distance(&candidate, &vector);
+            if dist > distance {
+                anyhow::Ok((candidate, dist))
+            } else {
+                anyhow::Ok((vector, distance))
+            }
+        },
+    )?;
+    crate::vector::normalize(&mut p);
+    crate::vector::normalize(&mut q);
+    crate::vector::subtract_into(&mut p, &q);
+    crate::vector::normalize(&mut p);
+    Ok(p)
+}
+
+fn pick_random_vec(depth: usize, basis: &Basis, be: &impl BuildableBackend) -> Result<Vector> {
+    let mut v = be.get_random_vector(&mut rand::thread_rng())?.clone();
+    reduce_vector(&mut v, depth, basis);
+    Ok(v)
+}
+
+#[inline(always)]
+fn reduce_vector(vector: &mut Vector, depth: usize, basis: &Basis) {
+    for i in 0..depth {
+        crate::vector::project_to_plane(vector, &basis[i])
+    }
+}
+
+#[inline(always)]
+fn find_face_idx(projection: &Vector) -> i32 {
+    let (min_idx, max_idx) = projection.argminmax();
+    let idx = if projection[max_idx].abs() >= projection[min_idx].abs() {
+        max_idx as i32
+    } else {
+        min_idx as i32
+    };
+    if projection[idx as usize] > 0.0 {
+        idx + 1
+    } else {
+        -(idx + 1)
+    }
 }

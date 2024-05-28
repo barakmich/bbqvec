@@ -13,6 +13,7 @@ unsafe fn hsum128_ps_sse(x: __m128) -> f32 {
     _mm_cvtss_f32(x32)
 }
 
+#[allow(dead_code)]
 #[target_feature(enable = "sse")]
 pub(crate) unsafe fn euclid_similarity_sse(v1: &UnalignedF32Slice, v2: &UnalignedF32Slice) -> f32 {
     // It is safe to load unaligned floats from a pointer.

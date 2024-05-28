@@ -10,7 +10,7 @@ pub struct BackendInfo {
 }
 
 pub trait VectorBackend {
-    type Buildable: BuildableBackend;
+    type Buildable: BuildableBackend + Sync;
     type Indexable: IndexableBackend;
     type CompiledBackend: VectorBackend;
 
@@ -25,8 +25,8 @@ pub trait VectorBackend {
 
 pub trait BuildableBackend: VectorBackend {
     fn get_vector(&self, id: ID) -> Result<Vector>;
-    fn get_random_vector<R: rand::Rng>(&self, rng: R) -> Result<Vector>;
-    fn iter(&self) -> impl Iterator<Item = (ID, &Vector)> + Sync;
+    fn get_random_vector<R: rand::Rng>(&self, rng: &mut R) -> Result<Vector>;
+    fn iter_vecs(&self) -> impl Iterator<Item = (ID, &Vector)>;
 }
 
 pub trait IndexableBackend: VectorBackend {

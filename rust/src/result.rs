@@ -11,7 +11,6 @@ pub struct ResultSet {
     sims: Vec<f32>,
     ids: Vec<ID>,
     k: usize,
-    valid: usize,
 }
 
 impl ResultSet {
@@ -20,12 +19,15 @@ impl ResultSet {
             sims: Vec::with_capacity(k),
             ids: Vec::with_capacity(k),
             k,
-            valid: 0,
         }
     }
 
     pub fn len(&self) -> usize {
         self.sims.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.sims.is_empty()
     }
 
     pub fn compute_recall(&self, baseline: &ResultSet, at: usize) -> f64 {
@@ -74,7 +76,7 @@ impl ResultSet {
         self.sims.truncate(self.k);
     }
 
-    fn iter(&self) -> impl Iterator<Item = SearchResult> + '_ {
+    pub fn iter_results(&self) -> impl Iterator<Item = SearchResult> + '_ {
         self.sims
             .iter()
             .zip(self.ids.iter())

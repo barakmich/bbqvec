@@ -4,7 +4,7 @@ use crate::Vector;
 pub(crate) fn project_to_plane(vec: &mut Vector, normal: &Vector) {
     let dot = dot_product(vec, normal);
     for (n, v) in normal.iter().zip(vec.iter_mut()) {
-        *v -= n * dot
+        *v -= n * dot;
     }
     normalize(vec);
 }
@@ -19,4 +19,19 @@ pub(crate) fn normalize(vec: &mut Vector) {
 #[inline(always)]
 pub(crate) fn dot_product(vec: &Vector, other: &Vector) -> f32 {
     crate::spaces::simple::dot_product(vec.into(), other.into())
+}
+
+#[inline(always)]
+pub(crate) fn subtract_into(vec: &mut Vector, other: &Vector) {
+    for (v, o) in vec.iter_mut().zip(other.iter()) {
+        *v -= o;
+    }
+}
+
+#[inline(always)]
+pub(crate) fn distance(vec: &Vector, other: &Vector) -> f32 {
+    vec.iter()
+        .zip(other.iter())
+        .fold(0.0, |acc, (a, b)| acc + ((a - b) * (a - b)))
+        .sqrt()
 }

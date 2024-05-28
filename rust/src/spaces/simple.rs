@@ -16,6 +16,7 @@ const MIN_DIM_SIZE_AVX: usize = 32;
 ))]
 const MIN_DIM_SIZE_SIMD: usize = 16;
 
+#[allow(dead_code)]
 pub fn euclidean_distance(u: &UnalignedF32Slice, v: &UnalignedF32Slice) -> f32 {
     #[cfg(target_arch = "x86_64")]
     {

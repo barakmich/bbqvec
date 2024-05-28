@@ -24,7 +24,8 @@ func (vs *VectorStore) createSplit(depth int, currentBasis Basis, be BuildableBa
 
 	// Now, find something that's "far" from p
 	var q Vector
-	var bestdist float32
+	bestdist := float32(-2.0)
+
 	for i := 0; i < vectorsToConsider; i++ {
 		candidate, err := vs.getRandomVec(depth, currentBasis, be)
 		if err != nil {
@@ -36,8 +37,6 @@ func (vs *VectorStore) createSplit(depth int, currentBasis Basis, be BuildableBa
 			bestdist = dist
 		}
 	}
-
-	bestdist = -2.0
 
 	p.Normalize()
 	q.Normalize()
