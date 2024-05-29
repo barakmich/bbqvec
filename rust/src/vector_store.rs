@@ -11,7 +11,7 @@ use crate::{
     backend::{BuildableBackend, VectorBackend},
     counting_bitmap::CountingBitmap,
     vector::dot_product,
-    Basis, Bitmap, ResultSet, Vector, ID,
+    Basis, Bitmap, IndexIDIterator, ResultSet, Vector, ID,
 };
 
 pub struct VectorStore<E: VectorBackend, B: Bitmap> {
@@ -223,16 +223,17 @@ fn create_split(i: usize, basis: &Basis, be: &impl BuildableBackend) -> Result<V
 }
 
 fn pick_random_vec(depth: usize, basis: &Basis, be: &impl BuildableBackend) -> Result<Vector> {
-    let mut v = be.get_random_vector(&mut rand::thread_rng())?.clone();
+    let mut v = be.get_random_vector()?.clone();
     reduce_vector(&mut v, depth, basis);
     Ok(v)
 }
 
 #[inline(always)]
 fn reduce_vector(vector: &mut Vector, depth: usize, basis: &Basis) {
-    for i in 0..depth {
-        crate::vector::project_to_plane(vector, &basis[i])
-    }
+    basis
+        .iter()
+        .take(depth)
+        .for_each(|b| crate::vector::project_to_plane(vector, b));
 }
 
 #[inline(always)]
@@ -247,5 +248,41 @@ fn find_face_idx(projection: &Vector) -> i32 {
         idx + 1
     } else {
         -(idx + 1)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::MemoryBackend;
+
+    fn vecs() -> Vec<Vector> {
+        vec![
+            vec![1.0, 0.0],
+            vec![0.0, 1.0],
+            vec![1.0, 1.0],
+            vec![-1.0, 0.0],
+        ]
+    }
+
+    #[test]
+    fn test_create_basis() {
+        let mut mem = MemoryBackend::new(2, 1).unwrap();
+        mem.set_rng(Box::new(rand::rngs::mock::StepRng::new(0, 3)));
+        for (i, v) in vecs().enumerate_ids() {
+            mem.put_vector(i, v).unwrap();
+        }
+        let be = mem.as_buildable_backend().unwrap();
+        let basis_set: Vec<Basis> =
+            VectorStore::<MemoryBackend, crate::BitVec>::make_basis(be, 1, 2).unwrap();
+        assert_eq!(basis_set.len(), 1);
+        assert_eq!(basis_set[0].len(), 2);
+        assert_eq!(basis_set[0][0], vec![0.0, 0.0]);
+        assert_eq!(basis_set[0][1], vec![0.0, 0.0]);
+    }
+
+    #[test]
+    fn test_make_bitmaps() {
+        //let mem = MemoryBackend::new(2, 2);
     }
 }

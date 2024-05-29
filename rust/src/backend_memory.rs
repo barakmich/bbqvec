@@ -1,6 +1,10 @@
-use std::cmp::min;
+use std::{
+    cmp::min,
+    sync::{Arc, Mutex},
+};
 
 use anyhow::{anyhow, Result};
+use rand::{Rng, RngCore};
 
 use crate::{
     backend::{BackendInfo, BuildableBackend, IndexableBackend, VectorBackend},
@@ -11,6 +15,7 @@ pub struct MemoryBackend {
     vecs: Vec<Option<Vector>>,
     dimensions: usize,
     n_basis: usize,
+    rng: Option<Arc<Mutex<Box<dyn RngCore + Send>>>>,
 }
 
 impl MemoryBackend {
@@ -19,7 +24,12 @@ impl MemoryBackend {
             vecs: Vec::new(),
             dimensions,
             n_basis,
+            rng: None,
         })
+    }
+
+    pub fn set_rng(&mut self, rng: Box<dyn RngCore + Send>) {
+        self.rng = Some(Arc::new(Mutex::new(rng)));
     }
 }
 
@@ -83,11 +93,14 @@ impl BuildableBackend for MemoryBackend {
         elem.clone().ok_or(anyhow!("vector not found"))
     }
 
-    fn get_random_vector<R: rand::Rng>(&self, rng: &mut R) -> Result<Vector> {
+    fn get_random_vector(&self) -> Result<Vector> {
         // This assumes a rather dense vector set... otherwise, use an ID lookup map
-        let x: usize = rng.gen_range(0..self.vecs.len());
+        let x: usize = match self.rng {
+            Some(ref rng) => rng.lock().unwrap().gen_range(0..self.vecs.len()),
+            None => rand::thread_rng().gen_range(0..self.vecs.len()),
+        };
         self.get_vector(x as ID)
-            .or_else(|_| self.get_random_vector(rng))
+            .or_else(|_| self.get_random_vector())
     }
 
     fn iter_vecs(&self) -> impl Iterator<Item = (ID, &Vector)> {
