@@ -30,11 +30,12 @@ func BenchmarkMemoryStore(b *testing.B) {
 
 	store.BuildIndex()
 
-	v := NewRandVector(*dim, nil)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		store.FindNearest(v, 20, *searchk, *spill)
-	}
+	b.Run("Internal", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			v := NewRandVector(*dim, nil)
+			store.FindNearest(v, 20, *searchk, *spill)
+		}
+	})
 }
 
 func BenchmarkParameters(b *testing.B) {
