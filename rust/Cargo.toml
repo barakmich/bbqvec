@@ -12,6 +12,8 @@ bitvec = {version = "1", features = ["serde"]}
 bytemuck = {version = "1.16.0", features = ["derive", "extern_crate_alloc"]}
 byteorder = "1.5.0"
 criterion = "0.5.1"
+croaring = "1.1.0"
+pprof = {version = "0.13.0", features = ["flamegraph", "protobuf-codec", "protobuf", "criterion"]}
 rand = "0.8.5"
 rayon = "1.10.0"
 roaring = {version = "0.10.4", features = ["serde"]}
@@ -21,3 +23,6 @@ thiserror = "1.0.61"
 [[bench]]
 name = "main_benchmark"
 harness = false
+
+[profile.bench]
+debug = true

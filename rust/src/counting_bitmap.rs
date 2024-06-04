@@ -1,8 +1,16 @@
+use std::fmt::Display;
+
 use crate::Bitmap;
 
 #[derive(Default)]
 pub struct CountingBitmap<B: Bitmap> {
     bitmaps: Vec<B>,
+}
+
+impl<B: Bitmap> Display for CountingBitmap<B> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{:?}", self.cardinalities()))
+    }
 }
 
 impl<B: Bitmap> CountingBitmap<B> {
@@ -18,17 +26,17 @@ impl<B: Bitmap> CountingBitmap<B> {
             self.bitmaps[i].xor(&cur);
             cur.and_not(&self.bitmaps[i]);
             self.bitmaps[i].or(&cur);
-            if cur.count() == 0 {
+            if cur.is_empty() {
                 break;
             }
         }
     }
 
+    pub fn cardinalities(&self) -> Vec<usize> {
+        self.bitmaps.iter().map(|b| b.count()).collect::<Vec<_>>()
+    }
+
     pub fn top_k(&self, search_k: usize) -> Option<&B> {
-        println!(
-            "{:?}",
-            self.bitmaps.iter().map(|b| b.count()).collect::<Vec<_>>()
-        );
         self.bitmaps.iter().rev().find(|x| x.count() >= search_k)
     }
 }

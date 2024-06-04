@@ -24,8 +24,14 @@ pub struct VectorStore<E: VectorBackend, B: Bitmap> {
     bitmaps: Option<Vec<HashMap<i32, B>>>,
 }
 
-impl<E: VectorBackend> VectorStore<E, crate::BitVec> {
+impl<E: VectorBackend> VectorStore<E, crate::bitmaps::CRoaringBitmap> {
     pub fn new_dense_bitmap(backend: E) -> Result<Self> {
+        VectorStore::new(backend)
+    }
+}
+
+impl<E: VectorBackend> VectorStore<E, crate::bitmaps::RoaringBitmap> {
+    pub fn new_sparse_bitmap(backend: E) -> Result<Self> {
         VectorStore::new(backend)
     }
 }
@@ -142,7 +148,7 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
         let bases = make_basis(self.n_basis, self.dimensions)?;
         println!("made basis {:?}", Instant::now().duration_since(start));
         start = Instant::now();
-        let bitmaps = Self::make_bitmaps(be, &bases)?;
+        let bitmaps = Self::make_bitmaps_par(be, &bases)?;
         println!("made bitmaps {:?}", Instant::now().duration_since(start));
         self.save_all(&bases, &bitmaps)?;
         let backend = self.backend.compile()?;
@@ -155,6 +161,7 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
         })
     }
 
+    #[allow(unused)]
     fn make_bitmaps(be: &E::Buildable, bases: &[Basis]) -> Result<Vec<HashMap<i32, B>>> {
         let dim = bases[0].len();
         bases
@@ -168,9 +175,7 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
                     for basis in b {
                         proj.push(dot_product(vec, basis));
                     }
-                    println!("proj: {:?}", proj);
                     let face_idx = find_face_idx(&proj);
-                    println!("faceidx: {:?}", face_idx);
                     out.entry(face_idx).or_default().add(id);
                 });
                 Ok(out)
@@ -180,6 +185,7 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
             .collect()
     }
 
+    #[allow(unused)]
     fn make_bitmaps_par(be: &E::Buildable, bases: &[Basis]) -> Result<Vec<HashMap<i32, B>>> {
         let arc_be = Arc::new(Mutex::new(be));
         let prep: Vec<_> = bases.iter().map(|b| (b.clone(), arc_be.clone())).collect();
@@ -236,9 +242,9 @@ fn print_basis(basis: &Basis) {
 
 fn orthonormalize(mut basis: Basis, rounds: usize) -> Basis {
     let dim = basis[0].len();
-    normalize(&mut basis[0]);
     for _ in 0..rounds {
         for i in 0..basis.len() {
+            normalize(&mut basis[i]);
             for j in i + 1..basis.len() {
                 let dot = dot_product(&basis[i], &basis[j]);
                 for k in 0..dim {

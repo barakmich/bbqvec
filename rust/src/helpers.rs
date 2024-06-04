@@ -5,7 +5,7 @@ use crate::{Vector, ID};
 pub fn create_random_vector(dimensions: usize) -> Vector {
     let mut out = Vec::new();
     for _ in 0..dimensions {
-        out.push(rand::thread_rng().gen_range(0.0..1.0))
+        out.push(rand::thread_rng().gen_range(-1.0..1.0))
     }
     crate::vector::normalize(&mut out);
     out
