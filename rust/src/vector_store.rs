@@ -114,7 +114,7 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
                 if let Some(bm) = self.bitmaps.as_ref().unwrap()[i].get(&face_idx) {
                     spill_into.or(bm);
                 };
-                proj[(face_idx.unsigned_abs() - 1) as usize] = 0.0
+                proj[(face_idx.unsigned_abs() - 1) as usize] = 0.0;
             }
             bs.or(&spill_into);
         }
@@ -156,6 +156,31 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
     }
 
     fn make_bitmaps(be: &E::Buildable, bases: &[Basis]) -> Result<Vec<HashMap<i32, B>>> {
+        let dim = bases[0].len();
+        bases
+            .iter()
+            .map(|b| {
+                let mut out: HashMap<i32, B> = HashMap::new();
+                let it = be.iter_vecs();
+                let mut proj = Vec::with_capacity(dim);
+                it.for_each(|(id, vec)| {
+                    proj.clear();
+                    for basis in b {
+                        proj.push(dot_product(vec, basis));
+                    }
+                    println!("proj: {:?}", proj);
+                    let face_idx = find_face_idx(&proj);
+                    println!("faceidx: {:?}", face_idx);
+                    out.entry(face_idx).or_default().add(id);
+                });
+                Ok(out)
+            })
+            .collect::<Vec<Result<HashMap<i32, B>>>>()
+            .into_iter()
+            .collect()
+    }
+
+    fn make_bitmaps_par(be: &E::Buildable, bases: &[Basis]) -> Result<Vec<HashMap<i32, B>>> {
         let arc_be = Arc::new(Mutex::new(be));
         let prep: Vec<_> = bases.iter().map(|b| (b.clone(), arc_be.clone())).collect();
 
@@ -193,13 +218,25 @@ fn make_basis(n_basis: usize, dimensions: usize) -> Result<Vec<Basis>> {
         for _ in 0..dimensions {
             basis.push(create_random_vector(dimensions));
         }
-        bases.push(orthonormalize(basis, 10));
+        let out = orthonormalize(basis, 1);
+        bases.push(out);
     }
     Ok(bases)
 }
 
+#[allow(unused)]
+fn print_basis(basis: &Basis) {
+    for i in 0..basis.len() {
+        for j in 0..basis.len() {
+            print!("{:+.4} ", dot_product(&basis[i], &basis[j]));
+        }
+        println!();
+    }
+}
+
 fn orthonormalize(mut basis: Basis, rounds: usize) -> Basis {
     let dim = basis[0].len();
+    normalize(&mut basis[0]);
     for _ in 0..rounds {
         for i in 0..basis.len() {
             for j in i + 1..basis.len() {
