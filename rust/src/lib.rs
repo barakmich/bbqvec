@@ -1,4 +1,4 @@
-use std::ops::{BitAndAssign, BitOrAssign, BitXorAssign, SubAssign};
+use std::ops::{BitOrAssign, BitXorAssign, SubAssign};
 
 use backend::BuildableBackend;
 use roaring::RoaringBitmap;

@@ -1,15 +1,6 @@
 use crate::Vector;
 
 #[inline(always)]
-pub fn project_to_plane(vec: &mut Vector, normal: &Vector) {
-    let dot = dot_product(vec, normal);
-    for (n, v) in normal.iter().zip(vec.iter_mut()) {
-        *v -= n * dot;
-    }
-    normalize(vec);
-}
-
-#[inline(always)]
 pub fn normalize(vec: &mut Vector) {
     let s = crate::unaligned_f32::UnalignedF32Slice::from_slice(vec.as_slice());
     let norm = crate::spaces::simple::dot_product(s, s).sqrt();

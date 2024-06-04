@@ -1,5 +1,5 @@
 use bbqvec::IndexIDIterator;
-use criterion::{black_box, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion};
 
 pub fn criterion_benchmark_memory_store(c: &mut Criterion) {
     let data = bbqvec::create_vector_set(256, 100000);

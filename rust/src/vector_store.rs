@@ -10,8 +10,9 @@ use std::{
 use crate::{
     backend::{BuildableBackend, VectorBackend},
     counting_bitmap::CountingBitmap,
-    vector::dot_product,
-    Basis, Bitmap, IndexIDIterator, ResultSet, Vector, ID,
+    create_random_vector,
+    vector::{dot_product, normalize},
+    Basis, Bitmap, ResultSet, Vector, ID,
 };
 
 pub struct VectorStore<E: VectorBackend, B: Bitmap> {
@@ -138,7 +139,7 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
             .ok_or(anyhow!("Backend not buildable"))?;
 
         let mut start = Instant::now();
-        let bases = Self::make_basis(be, self.n_basis, self.dimensions)?;
+        let bases = make_basis(self.n_basis, self.dimensions)?;
         println!("made basis {:?}", Instant::now().duration_since(start));
         start = Instant::now();
         let bitmaps = Self::make_bitmaps(be, &bases)?;
@@ -152,19 +153,6 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
             bases: Some(bases),
             bitmaps: Some(bitmaps),
         })
-    }
-
-    fn make_basis(be: &E::Buildable, n_basis: usize, dimensions: usize) -> Result<Vec<Basis>> {
-        let mut bases = Vec::<Basis>::with_capacity(n_basis);
-        for _n in 0..n_basis {
-            let mut basis = Basis::with_capacity(dimensions);
-            for i in 0..dimensions {
-                let norm = create_split(i, &basis, be)?;
-                basis.push(norm);
-            }
-            bases.push(basis);
-        }
-        Ok(bases)
     }
 
     fn make_bitmaps(be: &E::Buildable, bases: &[Basis]) -> Result<Vec<HashMap<i32, B>>> {
@@ -198,42 +186,32 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
     }
 }
 
-const VECTORS_TO_CONSIDER: usize = 200;
+fn make_basis(n_basis: usize, dimensions: usize) -> Result<Vec<Basis>> {
+    let mut bases = Vec::<Basis>::with_capacity(n_basis);
+    for _n in 0..n_basis {
+        let mut basis = Basis::with_capacity(dimensions);
+        for _ in 0..dimensions {
+            basis.push(create_random_vector(dimensions));
+        }
+        bases.push(orthonormalize(basis, 10));
+    }
+    Ok(bases)
+}
 
-fn create_split(i: usize, basis: &Basis, be: &impl BuildableBackend) -> Result<Vector> {
-    // First, find a random vector in the set
-    let mut p = pick_random_vec(i, basis, be)?;
-    let (mut q, _dist) = (0..VECTORS_TO_CONSIDER).try_fold(
-        (pick_random_vec(i, basis, be)?, -2.0),
-        |(vector, distance), _| {
-            let candidate = pick_random_vec(i, basis, be)?;
-            let dist = crate::vector::distance(&candidate, &vector);
-            if dist > distance {
-                anyhow::Ok((candidate, dist))
-            } else {
-                anyhow::Ok((vector, distance))
+fn orthonormalize(mut basis: Basis, rounds: usize) -> Basis {
+    let dim = basis[0].len();
+    for _ in 0..rounds {
+        for i in 0..basis.len() {
+            for j in i + 1..basis.len() {
+                let dot = dot_product(&basis[i], &basis[j]);
+                for k in 0..dim {
+                    basis[j][k] -= dot * basis[i][k];
+                }
+                normalize(&mut basis[j]);
             }
-        },
-    )?;
-    crate::vector::normalize(&mut p);
-    crate::vector::normalize(&mut q);
-    crate::vector::subtract_into(&mut p, &q);
-    crate::vector::normalize(&mut p);
-    Ok(p)
-}
-
-fn pick_random_vec(depth: usize, basis: &Basis, be: &impl BuildableBackend) -> Result<Vector> {
-    let mut v = be.get_random_vector()?.clone();
-    reduce_vector(&mut v, depth, basis);
-    Ok(v)
-}
-
-#[inline(always)]
-fn reduce_vector(vector: &mut Vector, depth: usize, basis: &Basis) {
+        }
+    }
     basis
-        .iter()
-        .take(depth)
-        .for_each(|b| crate::vector::project_to_plane(vector, b));
 }
 
 #[inline(always)]
@@ -272,13 +250,9 @@ mod test {
         for (i, v) in vecs().enumerate_ids() {
             mem.put_vector(i, v).unwrap();
         }
-        let be = mem.as_buildable_backend().unwrap();
-        let basis_set: Vec<Basis> =
-            VectorStore::<MemoryBackend, crate::BitVec>::make_basis(be, 1, 2).unwrap();
+        let basis_set: Vec<Basis> = make_basis(1, 2).unwrap();
         assert_eq!(basis_set.len(), 1);
         assert_eq!(basis_set[0].len(), 2);
-        assert_eq!(basis_set[0][0], vec![0.0, 0.0]);
-        assert_eq!(basis_set[0][1], vec![0.0, 0.0]);
     }
 
     #[test]

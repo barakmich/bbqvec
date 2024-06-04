@@ -18,13 +18,6 @@ pub fn criterion_benchmark_micro(c: &mut Criterion) {
         let normal = bbqvec::create_random_vector(100);
         b.iter(|| bbqvec::vector::dot_product(&vec, &normal));
     });
-    c.bench_function("project_to_plane_100", |b| {
-        b.iter(|| {
-            let mut vec = bbqvec::create_random_vector(100);
-            let normal = bbqvec::create_random_vector(100);
-            bbqvec::vector::project_to_plane(&mut vec, &normal);
-        })
-    });
     c.bench_function("roaring", |b| {
         let mut x = roaring::RoaringBitmap::new();
         let mut y = roaring::RoaringBitmap::new();
