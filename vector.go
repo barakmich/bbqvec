@@ -18,15 +18,6 @@ func (v Vector) Clone() Vector {
 	return out
 }
 
-func (v Vector) projectToPlane(normal Vector, buf []float32) {
-	dot := vek32.Dot(v, normal)
-	vek32.MulNumber_Into(buf, normal, dot)
-	vek32.Sub_Inplace(v, buf)
-	// normalize in-line
-	factor := vek32.Norm(v)
-	vek32.DivNumber_Inplace(v, factor)
-}
-
 func (v Vector) Normalize() {
 	factor := vek32.Norm(v)
 	vek32.DivNumber_Inplace(v, factor)

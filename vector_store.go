@@ -2,7 +2,9 @@ package bbq
 
 import (
 	"errors"
+	"fmt"
 	"math"
+	"strings"
 	"sync"
 
 	"github.com/kelindar/bitmap"
@@ -131,7 +133,7 @@ func (vs *VectorStore) BuildIndex() error {
 	if !ok {
 		return errors.New("Backend does not support building")
 	}
-	err := vs.makeBasis(be)
+	err := vs.makeBasis()
 	if err != nil {
 		return err
 	}
@@ -182,24 +184,48 @@ func (vs *VectorStore) saveAll() error {
 	return nil
 }
 
-func (vs *VectorStore) makeBasis(be BuildableBackend) error {
+func (vs *VectorStore) makeBasis() error {
 	vs.log("Making basis set")
 	for n := 0; n < vs.nbasis; n++ {
-		i := 0
-		basis := make(Basis, 0, vs.dimensions)
-		for i < vs.dimensions {
-			norm, err := vs.createSplit(i, basis, be)
-			if err != nil {
-				return err
-			}
-			basis = append(basis, norm)
-			i++
+		basis := make(Basis, vs.dimensions)
+		for i := range vs.dimensions {
+			basis[i] = NewRandVector(vs.dimensions, nil)
+		}
+		for range 10 {
+			orthonormalize(basis)
 		}
 		vs.log("Completed basis %d", n)
 		vs.bases[n] = basis
 	}
 	vs.log("Completed basis set generation")
 	return nil
+}
+
+// Use Modified Gram-Schmidt (https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process)
+// to turn our random vectors into an orthonormal basis.
+func orthonormalize(basis Basis) {
+	buf := make([]float32, len(basis[0]))
+	cur := basis[0]
+	for i := 1; i < len(basis); i++ {
+		for j := i; j < len(basis); j++ {
+			dot := vek32.Dot(basis[j], cur)
+			vek32.MulNumber_Into(buf, cur, dot)
+			vek32.Sub_Inplace(basis[j], buf)
+			basis[j].Normalize()
+		}
+		cur = basis[i]
+	}
+}
+
+func printBasis(basis Basis) {
+	for i := 0; i < len(basis); i++ {
+		sim := make([]any, len(basis))
+		for j := 0; j < len(basis); j++ {
+			sim[j] = vek32.CosineSimilarity(basis[i], basis[j])
+		}
+		pattern := strings.Repeat("%+.15f  ", len(basis))
+		fmt.Printf(pattern+"\n", sim...)
+	}
 }
 
 func (vs *VectorStore) makeBitmaps(be BuildableBackend) error {
@@ -253,15 +279,6 @@ func (vs *VectorStore) makeBitmaps(be BuildableBackend) error {
 	}
 	vs.log("Completed bitmap generation")
 	return nil
-}
-
-func (vs *VectorStore) reduceVector(vector Vector, depth int, basis Basis) Vector {
-	buf := vs.getBuf()
-	v := vector.Clone()
-	for i := 0; i < depth; i++ {
-		v.projectToPlane(basis[i], buf)
-	}
-	return v
 }
 
 func (vs *VectorStore) getBuf() []float32 {

@@ -9,15 +9,6 @@ import (
 	"github.com/viterin/vek/vek32"
 )
 
-func BenchmarkMicroProjection(b *testing.B) {
-	buf := make([]float32, 100)
-	for i := 0; i < b.N; i++ {
-		v := NewRandVector(100, nil)
-		n := NewRandVector(100, nil)
-		v.projectToPlane(n, buf)
-	}
-}
-
 func BenchmarkMicroDot(b *testing.B) {
 	v := NewRandVector(100, nil)
 	n := NewRandVector(100, nil)
