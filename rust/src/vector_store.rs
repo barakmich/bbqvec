@@ -114,7 +114,7 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
                 if let Some(bm) = self.bitmaps.as_ref().unwrap()[i].get(&face_idx) {
                     spill_into.or(bm);
                 };
-                proj[face_idx.unsigned_abs() as usize] = 0.0
+                proj[(face_idx.unsigned_abs() - 1) as usize] = 0.0
             }
             bs.or(&spill_into);
         }
@@ -232,7 +232,7 @@ fn find_face_idx(projection: &Vector) -> i32 {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::MemoryBackend;
+    use crate::{IndexIDIterator, MemoryBackend};
 
     fn vecs() -> Vec<Vector> {
         vec![

@@ -44,7 +44,7 @@ mod test {
         let mut cbm = CountingBitmap::<crate::BitVec>::new(3);
         let bm_a = bitvec![usize, Lsb0; 0, 0, 1];
         let bm_b = bitvec![usize, Lsb0; 0, 1, 1];
-        let bm_c = bitvec![usize, Lsb0; 0, 1, 1];
+        let bm_c = bitvec![usize, Lsb0; 1, 1, 1];
         cbm.or(&bm_a);
         cbm.or(&bm_b);
         cbm.or(&bm_c);
@@ -52,5 +52,6 @@ mod test {
         assert_eq!(v.len(), 1);
         assert_eq!(v[0], 2);
         assert_eq!(cbm.top_k(10), None);
+        assert_eq!(cbm.top_k(1).unwrap().count(), 1);
     }
 }

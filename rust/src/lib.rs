@@ -75,7 +75,7 @@ impl Bitmap for BitVec {
     }
 
     fn count(&self) -> usize {
-        self.len()
+        self.count_ones()
     }
 
     fn add(&mut self, id: ID) {
@@ -104,6 +104,9 @@ impl Bitmap for BitVec {
     }
 
     fn xor(&mut self, rhs: &Self) {
+        if self.len() < rhs.len() {
+            self.resize(rhs.len(), false)
+        }
         self.bitxor_assign(rhs)
     }
 

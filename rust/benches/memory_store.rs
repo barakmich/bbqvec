@@ -2,9 +2,9 @@ use bbqvec::IndexIDIterator;
 use criterion::{BenchmarkId, Criterion};
 
 pub fn criterion_benchmark_memory_store(c: &mut Criterion) {
-    let data = bbqvec::create_vector_set(256, 100000);
+    let data = bbqvec::create_vector_set(64, 100000);
     println!("Made vecs");
-    let mem = bbqvec::MemoryBackend::new(256, 30).unwrap();
+    let mem = bbqvec::MemoryBackend::new(64, 30).unwrap();
     let mut store = bbqvec::VectorStore::new_dense_bitmap(mem).unwrap();
     println!("Made store");
     store.add_vector_iter(data.enumerate_ids()).unwrap();
