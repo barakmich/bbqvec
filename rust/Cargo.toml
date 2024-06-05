@@ -3,7 +3,8 @@ name = "bbqvec"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+#[workspace]
+#members = ["cmd/test-recall"]
 
 [dependencies]
 anyhow = "1.0.86"
@@ -11,14 +12,16 @@ argminmax = {version = "0.6.2", default-features = false, features = ["float"]}
 bitvec = {version = "1", features = ["serde"]}
 bytemuck = {version = "1.16.0", features = ["derive", "extern_crate_alloc"]}
 byteorder = "1.5.0"
-criterion = "0.5.1"
 croaring = "1.1.0"
-pprof = {version = "0.13.0", features = ["flamegraph", "protobuf-codec", "protobuf", "criterion"]}
 rand = "0.8.5"
 rayon = "1.10.0"
 roaring = {version = "0.10.4", features = ["serde"]}
 serde = "1.0.203"
 thiserror = "1.0.61"
+
+[dev-dependencies]
+criterion = "0.5.1"
+pprof = {version = "0.13.0", features = ["flamegraph", "protobuf-codec", "protobuf", "criterion"]}
 
 [[bench]]
 name = "main_benchmark"

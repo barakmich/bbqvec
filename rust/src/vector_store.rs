@@ -25,13 +25,19 @@ pub struct VectorStore<E: VectorBackend, B: Bitmap> {
 }
 
 impl<E: VectorBackend> VectorStore<E, crate::bitmaps::CRoaringBitmap> {
-    pub fn new_dense_bitmap(backend: E) -> Result<Self> {
+    pub fn new_croaring_bitmap(backend: E) -> Result<Self> {
         VectorStore::new(backend)
     }
 }
 
 impl<E: VectorBackend> VectorStore<E, crate::bitmaps::RoaringBitmap> {
-    pub fn new_sparse_bitmap(backend: E) -> Result<Self> {
+    pub fn new_roaring_bitmap(backend: E) -> Result<Self> {
+        VectorStore::new(backend)
+    }
+}
+
+impl<E: VectorBackend> VectorStore<E, crate::bitmaps::BitVec> {
+    pub fn new_bitvec_bitmap(backend: E) -> Result<Self> {
         VectorStore::new(backend)
     }
 }
