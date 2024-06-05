@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/kelindar/bitmap"
+	"github.com/RoaringBitmap/roaring"
 	"github.com/viterin/vek/vek32"
 )
 
@@ -21,7 +21,7 @@ type VectorStore struct {
 	dimensions int
 	nbasis     int
 	bases      []Basis
-	bms        []map[int]*bitmap.Bitmap
+	bms        []map[int]*roaring.Bitmap
 	built      bool
 }
 
@@ -32,7 +32,7 @@ func NewVectorStore(backend VectorBackend) (*VectorStore, error) {
 		nbasis:     info.NBasis,
 		backend:    backend,
 		bases:      make([]Basis, info.NBasis),
-		bms:        make([]map[int]*bitmap.Bitmap, info.NBasis),
+		bms:        make([]map[int]*roaring.Bitmap, info.NBasis),
 	}
 	if info.HasIndexData {
 		err := v.loadFromBackend()
@@ -78,7 +78,7 @@ func (vs *VectorStore) findNearestInternal(vector Vector, k int, searchk int, sp
 	buf := make([]float32, vs.dimensions)
 	maxes := make([]int, spill+1)
 	for i, basis := range vs.bases {
-		var spillClone bitmap.Bitmap
+		spillClone := roaring.New()
 		for x, b := range basis {
 			dot := vek32.Dot(b, vector)
 			buf[x] = dot
@@ -101,7 +101,7 @@ func (vs *VectorStore) findNearestInternal(vector Vector, k int, searchk int, sp
 		}
 		for _, m := range maxes {
 			if v, ok := vs.bms[i][m]; ok {
-				spillClone.Or(*v)
+				spillClone.Or(v)
 			}
 		}
 		counts.Or(spillClone)
@@ -112,15 +112,16 @@ func (vs *VectorStore) findNearestInternal(vector Vector, k int, searchk int, sp
 	rs := NewResultSet(k)
 	var err error
 
-	elems.Range(func(x uint32) {
+	elems.Iterate(func(x uint32) bool {
 		// things that take closures should really return error, so that it can abort...
-		if err != nil {
-			return
-		}
 		var sim float32
 		sim, err = vs.backend.ComputeSimilarity(vector, ID(x))
+		if err != nil {
+			return false
+		}
 		// On err, this will be the zero value of sum (but that's ok, we're going down)
 		rs.AddResult(ID(x), sim)
+		return true
 	})
 	return rs, err
 }
@@ -175,7 +176,7 @@ func (vs *VectorStore) saveAll() error {
 	}
 	for b, dimmap := range vs.bms {
 		for i, v := range dimmap {
-			err = be.SaveBitmap(b, i, *v)
+			err = be.SaveBitmap(b, i, v)
 			if err != nil {
 				return err
 			}
@@ -235,7 +236,7 @@ func (vs *VectorStore) makeBitmaps(be BuildableBackend) error {
 	for n, basis := range vs.bases {
 		wg.Add(1)
 		go func(n int, basis Basis, wg *sync.WaitGroup) {
-			out := make(map[int]*bitmap.Bitmap)
+			out := make(map[int]*roaring.Bitmap)
 			buf := make([]float32, vs.dimensions)
 			be.ForEachVector(func(i ID, v Vector) error {
 				if i != 0 && i%10000 == 0 {
@@ -261,13 +262,13 @@ func (vs *VectorStore) makeBitmaps(be BuildableBackend) error {
 				}
 
 				if _, ok := out[trueMax]; !ok {
-					out[trueMax] = new(bitmap.Bitmap)
+					out[trueMax] = roaring.NewBitmap()
 				}
-				out[trueMax].Set(uint32(i))
+				out[trueMax].Add(uint32(i))
 				return nil
 			})
 			vs.bms[n] = out
-			vs.log("Finished bitmaps for basis %d. Approx %d per face", n, out[1].Count())
+			vs.log("Finished bitmaps for basis %d. Approx %d per face", n, out[1].GetCardinality())
 			wg.Done()
 		}(n, basis, &wg)
 	}
@@ -297,18 +298,18 @@ func (vs *VectorStore) loadFromBackend() error {
 		return err
 	}
 	for b := 0; b < vs.nbasis; b++ {
-		dimmap := make(map[int]*bitmap.Bitmap)
+		dimmap := make(map[int]*roaring.Bitmap)
 		for i := 1; i <= vs.dimensions; i++ {
 			bm, err := be.LoadBitmap(b, i)
 			if err != nil {
 				return err
 			}
-			dimmap[i] = &bm
+			dimmap[i] = bm
 			bm, err = be.LoadBitmap(b, -i)
 			if err != nil {
 				return err
 			}
-			dimmap[-i] = &bm
+			dimmap[-i] = bm
 		}
 	}
 	vs.built = true

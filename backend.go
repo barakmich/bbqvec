@@ -1,6 +1,6 @@
 package bbq
 
-import "github.com/kelindar/bitmap"
+import "github.com/RoaringBitmap/roaring"
 
 type VectorBackend interface {
 	PutVector(id ID, v Vector) error
@@ -19,8 +19,8 @@ type IndexBackend interface {
 	SaveBases(bases []Basis) error
 	LoadBases() ([]Basis, error)
 
-	SaveBitmap(basis int, index int, bitmap bitmap.Bitmap) error
-	LoadBitmap(basis, index int) (bitmap.Bitmap, error)
+	SaveBitmap(basis int, index int, bitmap *roaring.Bitmap) error
+	LoadBitmap(basis, index int) (*roaring.Bitmap, error)
 }
 
 type CompilingBackend interface {
