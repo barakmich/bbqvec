@@ -11,6 +11,7 @@ pub struct ResultSet {
     sims: Vec<f32>,
     ids: Vec<ID>,
     k: usize,
+    pub checked: usize,
 }
 
 impl ResultSet {
@@ -19,6 +20,7 @@ impl ResultSet {
             sims: Vec::with_capacity(k),
             ids: Vec::with_capacity(k),
             k,
+            checked: 0,
         }
     }
 
@@ -43,6 +45,7 @@ impl ResultSet {
     }
 
     pub fn add_result(&mut self, id: ID, similarity: f32) {
+        self.checked += 1;
         if self.sims.len() == self.k {
             let last = self.sims.last().unwrap_or(&f32::MIN);
             if *last > similarity {

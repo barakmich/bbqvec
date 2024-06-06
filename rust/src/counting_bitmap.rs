@@ -20,8 +20,8 @@ impl<B: Bitmap> CountingBitmap<B> {
         }
     }
 
-    pub fn or(&mut self, rhs: &B) {
-        let mut cur = rhs.clone();
+    pub fn or(&mut self, rhs: B) {
+        let mut cur = rhs;
         for i in 0..self.bitmaps.len() {
             self.bitmaps[i].xor(&cur);
             cur.and_not(&self.bitmaps[i]);
@@ -53,9 +53,9 @@ mod test {
         let bm_a = bitvec![usize, Lsb0; 0, 0, 1];
         let bm_b = bitvec![usize, Lsb0; 0, 1, 1];
         let bm_c = bitvec![usize, Lsb0; 1, 1, 1];
-        cbm.or(&bm_a);
-        cbm.or(&bm_b);
-        cbm.or(&bm_c);
+        cbm.or(bm_a);
+        cbm.or(bm_b);
+        cbm.or(bm_c);
         let v: Vec<u64> = cbm.top_k(1).unwrap().iter_elems().collect();
         assert_eq!(v.len(), 1);
         assert_eq!(v[0], 2);

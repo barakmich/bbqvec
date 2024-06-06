@@ -104,6 +104,10 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
         }
     }
 
+    pub fn get_backend(&self) -> Option<&E::Buildable> {
+        self.backend.as_buildable_backend()
+    }
+
     #[inline(always)]
     fn find_nearest_internal(
         &self,
@@ -128,7 +132,7 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
                 };
                 proj[(face_idx.unsigned_abs() - 1) as usize] = 0.0;
             }
-            bs.or(&spill_into);
+            bs.or(spill_into);
         }
         let elems = bs
             .top_k(search_k)

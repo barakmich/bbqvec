@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 gflags = "0.3.12"
 bbqvec = {path = "../../"}
+anyhow = "1.0.86"
