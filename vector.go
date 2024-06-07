@@ -44,3 +44,12 @@ func NewRandVector(dim int, rng *rand.Rand) Vector {
 	vek32.DivNumber_Inplace(out, factor)
 	return out
 }
+
+func NewRandVectorSet(n int, dim int, rng *rand.Rand) []Vector {
+	out := make([]Vector, n)
+	for i := 0; i < n; i++ {
+		out[i] = NewRandVector(dim, rng)
+		out[i].Normalize()
+	}
+	return out
+}

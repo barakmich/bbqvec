@@ -19,7 +19,11 @@ func NewCountingBitmap(maxCount int) *CountingBitmap {
 func (c *CountingBitmap) cardinalities() []int {
 	cards := make([]int, len(c.bms))
 	for i, it := range c.bms {
-		cards[i] = int(it.GetCardinality())
+		if it == nil {
+			cards[i] = 0
+		} else {
+			cards[i] = int(it.GetCardinality())
+		}
 	}
 	return cards
 }

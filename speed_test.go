@@ -16,7 +16,7 @@ var (
 )
 
 func BenchmarkMemoryStore(b *testing.B) {
-	vecs := buildVectors(*nVectors, *dim, nil)
+	vecs := NewRandVectorSet(*nVectors, *dim, nil)
 
 	be := NewMemoryBackend(*dim, *nBasis)
 	store, err := NewVectorStore(be)
@@ -40,7 +40,7 @@ func BenchmarkMemoryStore(b *testing.B) {
 
 func BenchmarkParameters(b *testing.B) {
 	//First, build the thing
-	vecs := buildVectors(*nVectors, *dim, nil)
+	vecs := NewRandVectorSet(*nVectors, *dim, nil)
 
 	be := NewMemoryBackend(*dim, *nBasis)
 	store, err := NewVectorStore(be)
@@ -53,7 +53,7 @@ func BenchmarkParameters(b *testing.B) {
 	}
 
 	store.BuildIndex()
-	targetvecs := buildVectors(*testvecs, *dim, nil)
+	targetvecs := NewRandVectorSet(*testvecs, *dim, nil)
 	res := make([]*ResultSet, *testvecs)
 	for i, v := range targetvecs {
 		res[i], err = FullTableScanSearch(be, v, 20)

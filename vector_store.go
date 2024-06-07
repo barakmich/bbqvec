@@ -79,26 +79,7 @@ func (vs *VectorStore) findNearestInternal(vector Vector, k int, searchk int, sp
 	maxes := make([]int, spill+1)
 	for i, basis := range vs.bases {
 		spillClone := roaring.New()
-		for x, b := range basis {
-			dot := vek32.Dot(b, vector)
-			buf[x] = dot
-		}
-		for i := 0; i < spill+1; i++ {
-			big := vek32.ArgMax(buf)
-			small := vek32.ArgMin(buf)
-			idx := 0
-			if math.Abs(float64(buf[big])) >= math.Abs(float64(buf[small])) {
-				idx = big
-			} else {
-				idx = small
-			}
-			if buf[idx] > 0.0 {
-				maxes[i] = idx + 1
-			} else {
-				maxes[i] = -(idx + 1)
-			}
-			buf[idx] = 0.0
-		}
+		vs.findIndexesForBasis(vector, basis, buf, maxes)
 		for _, m := range maxes {
 			if v, ok := vs.bms[i][m]; ok {
 				spillClone.Or(v)
@@ -124,6 +105,29 @@ func (vs *VectorStore) findNearestInternal(vector Vector, k int, searchk int, sp
 		return true
 	})
 	return rs, err
+}
+
+func (vs *VectorStore) findIndexesForBasis(target Vector, basis Basis, buf []float32, maxes []int) {
+	for x, b := range basis {
+		dot := vek32.Dot(b, target)
+		buf[x] = dot
+	}
+	for i := 0; i < len(maxes); i++ {
+		big := vek32.ArgMax(buf)
+		small := vek32.ArgMin(buf)
+		idx := 0
+		if math.Abs(float64(buf[big])) >= math.Abs(float64(buf[small])) {
+			idx = big
+		} else {
+			idx = small
+		}
+		if buf[idx] > 0.0 {
+			maxes[i] = idx + 1
+		} else {
+			maxes[i] = -(idx + 1)
+		}
+		buf[idx] = 0.0
+	}
 }
 
 func (vs *VectorStore) BuildIndex() error {

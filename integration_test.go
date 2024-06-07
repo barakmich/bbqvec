@@ -1,18 +1,8 @@
 package bbq
 
 import (
-	"math/rand"
 	"testing"
 )
-
-func buildVectors(n int, dim int, rng *rand.Rand) []Vector {
-	out := make([]Vector, n)
-	for i := 0; i < n; i++ {
-		out[i] = NewRandVector(dim, rng)
-		out[i].Normalize()
-	}
-	return out
-}
 
 func TestBasic(t *testing.T) {
 	dim := 256
@@ -20,7 +10,7 @@ func TestBasic(t *testing.T) {
 	k := 20
 	searchk := 200
 
-	vecs := buildVectors(100000, dim, nil)
+	vecs := NewRandVectorSet(100000, dim, nil)
 
 	be := NewMemoryBackend(dim, nBasis)
 	store, err := NewVectorStore(be)
