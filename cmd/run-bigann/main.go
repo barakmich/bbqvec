@@ -46,8 +46,8 @@ func main() {
 
 	// Now the fun begins
 	dim := len(train[0])
-	be := bbq.NewMemoryBackend(dim, *bases)
-	store, err := bbq.NewVectorStore(be)
+	be := bbq.NewMemoryBackend(dim)
+	store, err := bbq.NewVectorStore(be, *bases, 1)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -12,8 +12,8 @@ func TestBasic(t *testing.T) {
 
 	vecs := NewRandVectorSet(100000, dim, nil)
 
-	be := NewMemoryBackend(dim, nBasis)
-	store, err := NewVectorStore(be)
+	be := NewMemoryBackend(dim)
+	store, err := NewVectorStore(be, nBasis, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

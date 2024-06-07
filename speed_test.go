@@ -18,8 +18,8 @@ var (
 func BenchmarkMemoryStore(b *testing.B) {
 	vecs := NewRandVectorSet(*nVectors, *dim, nil)
 
-	be := NewMemoryBackend(*dim, *nBasis)
-	store, err := NewVectorStore(be)
+	be := NewMemoryBackend(*dim)
+	store, err := NewVectorStore(be, *nBasis, 1)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -42,8 +42,8 @@ func BenchmarkParameters(b *testing.B) {
 	//First, build the thing
 	vecs := NewRandVectorSet(*nVectors, *dim, nil)
 
-	be := NewMemoryBackend(*dim, *nBasis)
-	store, err := NewVectorStore(be)
+	be := NewMemoryBackend(*dim)
+	store, err := NewVectorStore(be, *nBasis, 1)
 	if err != nil {
 		b.Fatal(err)
 	}

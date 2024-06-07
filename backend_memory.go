@@ -15,11 +15,10 @@ type MemoryBackend struct {
 
 var _ BuildableBackend = &MemoryBackend{}
 
-func NewMemoryBackend(dimensions int, nBasis int) *MemoryBackend {
+func NewMemoryBackend(dimensions int) *MemoryBackend {
 	return &MemoryBackend{
-		rng:    rand.New(rand.NewSource(time.Now().UnixMicro())),
-		nbasis: nBasis,
-		dim:    dimensions,
+		rng: rand.New(rand.NewSource(time.Now().UnixMicro())),
+		dim: dimensions,
 	}
 }
 
@@ -56,7 +55,6 @@ func (mem *MemoryBackend) Info() BackendInfo {
 	return BackendInfo{
 		HasIndexData: false,
 		Dimensions:   mem.dim,
-		NBasis:       mem.nbasis,
 		VectorCount:  len(mem.vecs),
 	}
 }

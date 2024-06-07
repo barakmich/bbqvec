@@ -30,7 +30,6 @@ type CompilingBackend interface {
 type BackendInfo struct {
 	HasIndexData bool
 	Dimensions   int
-	NBasis       int
 	VectorCount  int
 }
 

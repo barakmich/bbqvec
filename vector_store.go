@@ -22,17 +22,24 @@ type VectorStore struct {
 	nbasis     int
 	bases      []Basis
 	bms        []map[int]*roaring.Bitmap
+	preSpill   int
 	built      bool
 }
 
-func NewVectorStore(backend VectorBackend) (*VectorStore, error) {
+func NewVectorStore(backend VectorBackend, nBasis int, preSpill int) (*VectorStore, error) {
 	info := backend.Info()
+	if preSpill <= 0 {
+		preSpill = 1
+	} else if preSpill > info.Dimensions {
+		preSpill = info.Dimensions
+	}
 	v := &VectorStore{
 		dimensions: info.Dimensions,
-		nbasis:     info.NBasis,
+		nbasis:     nBasis,
 		backend:    backend,
-		bases:      make([]Basis, info.NBasis),
-		bms:        make([]map[int]*roaring.Bitmap, info.NBasis),
+		bases:      make([]Basis, nBasis),
+		bms:        make([]map[int]*roaring.Bitmap, nBasis),
+		preSpill:   preSpill,
 	}
 	if info.HasIndexData {
 		err := v.loadFromBackend()
@@ -242,33 +249,19 @@ func (vs *VectorStore) makeBitmaps(be BuildableBackend) error {
 		go func(n int, basis Basis, wg *sync.WaitGroup) {
 			out := make(map[int]*roaring.Bitmap)
 			buf := make([]float32, vs.dimensions)
+			maxes := make([]int, vs.preSpill)
 			be.ForEachVector(func(i ID, v Vector) error {
 				if i != 0 && i%10000 == 0 {
 					vs.log("Completed %d of basis %d", i, n)
 				}
-				for x, b := range basis {
-					dot := vek32.Dot(b, v)
-					buf[x] = dot
-				}
-				big := vek32.ArgMax(buf)
-				small := vek32.ArgMin(buf)
-				idx := 0
-				trueMax := 0
-				if math.Abs(float64(buf[big])) >= math.Abs(float64(buf[small])) {
-					idx = big
-				} else {
-					idx = small
-				}
-				if buf[idx] > 0.0 {
-					trueMax = idx + 1
-				} else {
-					trueMax = -(idx + 1)
-				}
+				vs.findIndexesForBasis(v, basis, buf, maxes)
 
-				if _, ok := out[trueMax]; !ok {
-					out[trueMax] = roaring.NewBitmap()
+				for _, m := range maxes {
+					if _, ok := out[m]; !ok {
+						out[m] = roaring.NewBitmap()
+					}
+					out[m].Add(uint32(i))
 				}
-				out[trueMax].Add(uint32(i))
 				return nil
 			})
 			vs.bms[n] = out
