@@ -1,7 +1,6 @@
 package bbq
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -23,7 +22,6 @@ type VectorStore struct {
 	bases      []Basis
 	bms        []map[int]*roaring.Bitmap
 	preSpill   int
-	built      bool
 }
 
 func NewVectorStore(backend VectorBackend, nBasis int, preSpill int) (*VectorStore, error) {
@@ -45,6 +43,14 @@ func NewVectorStore(backend VectorBackend, nBasis int, preSpill int) (*VectorSto
 		err := v.loadFromBackend()
 		return v, err
 	}
+	err := v.makeBasis()
+	if err != nil {
+		return nil, err
+	}
+	err = v.Sync()
+	if err != nil {
+		return nil, err
+	}
 	return v, nil
 }
 
@@ -59,19 +65,41 @@ func (vs *VectorStore) log(s string, a ...any) {
 }
 
 func (vs *VectorStore) AddVector(id ID, v Vector) error {
-	if vs.built {
-		// TODO: Add to bitmaps, save the bitmaps periodically, add to backing store
-		return ErrAlreadyBuilt
+	if vs.backend.Exists(id) {
+		vs.removeFromBitmaps(id)
 	}
-	return vs.backend.PutVector(id, v)
+	err := vs.backend.PutVector(id, v)
+	if err != nil {
+		return err
+	}
+	return vs.addToBitmaps([]ID{id}, []Vector{v})
+}
+
+func (vs *VectorStore) AddVectorsWithOffset(offset ID, vecs []Vector) error {
+	ids := make([]ID, len(vecs))
+	for i, v := range vecs {
+		id := offset + ID(i)
+		ids[i] = id
+		if vs.backend.Exists(id) {
+			vs.removeFromBitmaps(id)
+		}
+		vs.backend.PutVector(id, v)
+	}
+	return vs.addToBitmaps(ids, vecs)
+}
+
+func (vs *VectorStore) AddVectorsWithIDs(ids []ID, vecs []Vector) error {
+	for i, v := range vecs {
+		id := ids[i]
+		if vs.backend.Exists(id) {
+			vs.removeFromBitmaps(id)
+		}
+		vs.backend.PutVector(id, v)
+	}
+	return vs.addToBitmaps(ids, vecs)
 }
 
 func (vs *VectorStore) FindNearest(vector Vector, k int, searchk int, spill int) (*ResultSet, error) {
-	if !vs.built {
-		if be, ok := vs.backend.(BuildableBackend); ok {
-			return FullTableScanSearch(be, vector, k)
-		}
-	}
 	if spill < 0 {
 		spill = 0
 	} else if spill >= vs.dimensions {
@@ -138,24 +166,7 @@ func (vs *VectorStore) findIndexesForBasis(target Vector, basis Basis, buf []flo
 }
 
 func (vs *VectorStore) BuildIndex() error {
-	if vs.built {
-		return ErrAlreadyBuilt
-	}
-	be, ok := vs.backend.(BuildableBackend)
-	if !ok {
-		return errors.New("Backend does not support building")
-	}
-	err := vs.makeBasis()
-	if err != nil {
-		return err
-	}
-
-	err = vs.makeBitmaps(be)
-	if err != nil {
-		return err
-	}
-
-	err = vs.saveAll()
+	err := vs.Sync()
 	if err != nil {
 		return err
 	}
@@ -171,12 +182,10 @@ func (vs *VectorStore) BuildIndex() error {
 		}
 		vs.log("Completed compilation")
 	}
-	vs.built = true
-	vs.log("Index complete")
-	return err
+	return nil
 }
 
-func (vs *VectorStore) saveAll() error {
+func (vs *VectorStore) Sync() error {
 	be, ok := vs.backend.(IndexBackend)
 	if !ok {
 		return nil
@@ -229,7 +238,7 @@ func orthonormalize(basis Basis) {
 	}
 }
 
-func printBasis(basis Basis) {
+func debugPrintBasis(basis Basis) {
 	for i := 0; i < len(basis); i++ {
 		sim := make([]any, len(basis))
 		for j := 0; j < len(basis); j++ {
@@ -240,48 +249,43 @@ func printBasis(basis Basis) {
 	}
 }
 
-func (vs *VectorStore) makeBitmaps(be BuildableBackend) error {
-	vs.log("Making bitmaps")
+func (vs *VectorStore) removeFromBitmaps(id ID) {
+	for _, m := range vs.bms {
+		if m == nil {
+			continue
+		}
+		for _, bm := range m {
+			bm.Remove(uint32(id))
+		}
+	}
+}
+
+func (vs *VectorStore) addToBitmaps(ids []ID, vectors []Vector) error {
 	var wg sync.WaitGroup
-	errs := make([]error, vs.nbasis)
 	for n, basis := range vs.bases {
 		wg.Add(1)
 		go func(n int, basis Basis, wg *sync.WaitGroup) {
-			out := make(map[int]*roaring.Bitmap)
+			if v := vs.bms[n]; v == nil {
+				vs.bms[n] = make(map[int]*roaring.Bitmap)
+			}
 			buf := make([]float32, vs.dimensions)
 			maxes := make([]int, vs.preSpill)
-			be.ForEachVector(func(i ID, v Vector) error {
-				if i != 0 && i%10000 == 0 {
-					vs.log("Completed %d of basis %d", i, n)
-				}
+			for i := range vectors {
+				id := ids[i]
+				v := vectors[i]
 				vs.findIndexesForBasis(v, basis, buf, maxes)
-
 				for _, m := range maxes {
-					if _, ok := out[m]; !ok {
-						out[m] = roaring.NewBitmap()
+					if _, ok := vs.bms[n][m]; !ok {
+						vs.bms[n][m] = roaring.NewBitmap()
 					}
-					out[m].Add(uint32(i))
+					vs.bms[n][m].Add(uint32(id))
 				}
-				return nil
-			})
-			vs.bms[n] = out
-			vs.log("Finished bitmaps for basis %d. Approx %d per face", n, out[1].GetCardinality())
+			}
 			wg.Done()
 		}(n, basis, &wg)
 	}
 	wg.Wait()
-	for _, err := range errs {
-		if err != nil {
-			return err
-		}
-	}
-	vs.log("Completed bitmap generation")
 	return nil
-}
-
-func (vs *VectorStore) getBuf() []float32 {
-	// TODO: create a sync.pool?
-	return make([]float32, vs.dimensions)
 }
 
 func (vs *VectorStore) loadFromBackend() error {
@@ -309,6 +313,5 @@ func (vs *VectorStore) loadFromBackend() error {
 			dimmap[-i] = bm
 		}
 	}
-	vs.built = true
 	return nil
 }

@@ -1,18 +1,29 @@
 package bbq
 
-import "github.com/RoaringBitmap/roaring"
+import (
+	"errors"
+
+	"github.com/RoaringBitmap/roaring"
+)
 
 type VectorBackend interface {
 	PutVector(id ID, v Vector) error
 	ComputeSimilarity(targetVector Vector, targetID ID) (float32, error)
 	Info() BackendInfo
+	Exists(id ID) bool
 }
 
-type BuildableBackend interface {
+type scannableBackend interface {
 	VectorBackend
-	GetVector(id ID) (Vector, error)
-	GetRandomVector() (Vector, error)
-	ForEachVector(func(ID, Vector) error) error
+	ForEachVector(func(ID) error) error
+}
+
+type VectorGetter[T any] interface {
+	GetVector(id ID) (T, error)
+}
+
+type CompilingBackend interface {
+	Compile(logger PrintfFunc) (VectorBackend, error)
 }
 
 type IndexBackend interface {
@@ -23,19 +34,19 @@ type IndexBackend interface {
 	LoadBitmap(basis, index int) (*roaring.Bitmap, error)
 }
 
-type CompilingBackend interface {
-	Compile(logger PrintfFunc) (VectorBackend, error)
-}
-
 type BackendInfo struct {
 	HasIndexData bool
 	Dimensions   int
 	VectorCount  int
 }
 
-func FullTableScanSearch(b BuildableBackend, target Vector, k int) (*ResultSet, error) {
+func FullTableScanSearch(be VectorBackend, target Vector, k int) (*ResultSet, error) {
 	rs := NewResultSet(k)
-	err := b.ForEachVector(func(id ID, v Vector) error {
+	b, ok := be.(scannableBackend)
+	if !ok {
+		return nil, errors.New("Backend is incompatible")
+	}
+	err := b.ForEachVector(func(id ID) error {
 		sim, err := b.ComputeSimilarity(target, id)
 		if err != nil {
 			return err

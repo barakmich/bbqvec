@@ -7,13 +7,13 @@ import (
 )
 
 type MemoryBackend struct {
-	vecs   []Vector
-	rng    *rand.Rand
-	dim    int
-	nbasis int
+	vecs []Vector
+	rng  *rand.Rand
+	dim  int
 }
 
-var _ BuildableBackend = &MemoryBackend{}
+var _ scannableBackend = &MemoryBackend{}
+var _ VectorGetter[Vector] = &MemoryBackend{}
 
 func NewMemoryBackend(dimensions int) *MemoryBackend {
 	return &MemoryBackend{
@@ -22,18 +22,18 @@ func NewMemoryBackend(dimensions int) *MemoryBackend {
 	}
 }
 
-func (mem *MemoryBackend) PutVector(id ID, v Vector) error {
-	if len(v) != mem.dim {
+func (mem *MemoryBackend) PutVector(id ID, vector Vector) error {
+	if len(vector) != mem.dim {
 		return errors.New("MemoryBackend: vector dimension doesn't match")
 	}
 
 	if int(id) < len(mem.vecs) {
-		mem.vecs[int(id)] = v
+		mem.vecs[int(id)] = vector
 	} else if int(id) == len(mem.vecs) {
-		mem.vecs = append(mem.vecs, v)
+		mem.vecs = append(mem.vecs, vector)
 	} else {
 		mem.grow(int(id))
-		mem.vecs[int(id)] = v
+		mem.vecs[int(id)] = vector
 	}
 	return nil
 }
@@ -69,14 +69,20 @@ func (mem *MemoryBackend) GetVector(id ID) (Vector, error) {
 	return mem.vecs[int(id)], nil
 }
 
-func (mem *MemoryBackend) GetRandomVector() (Vector, error) {
-	n := mem.rng.Intn(len(mem.vecs))
-	return mem.vecs[n], nil
+func (mem *MemoryBackend) Exists(id ID) bool {
+	i := int(id)
+	if len(mem.vecs) <= i {
+		return false
+	}
+	return mem.vecs[i] != nil
 }
 
-func (mem *MemoryBackend) ForEachVector(cb func(ID, Vector) error) error {
+func (mem *MemoryBackend) ForEachVector(cb func(ID) error) error {
 	for i, v := range mem.vecs {
-		err := cb(ID(i), v)
+		if v == nil {
+			continue
+		}
+		err := cb(ID(i))
 		if err != nil {
 			return err
 		}

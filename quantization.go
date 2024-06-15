@@ -23,7 +23,7 @@ func (q NoQuantization) Similarity(x, y Vector) float32 {
 }
 
 func (q NoQuantization) Lower(v Vector) (Vector, error) {
-	return v.Clone(), nil
+	return v, nil
 }
 
 func (q NoQuantization) Marshal(lower Vector) ([]byte, error) {
