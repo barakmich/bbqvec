@@ -35,13 +35,12 @@ func (q Float16Quantization) Lower(v Vector) (float16Vec, error) {
 	return out, nil
 }
 
-func (q Float16Quantization) Marshal(lower float16Vec) ([]byte, error) {
-	out := make([]byte, 2*len(lower))
+func (q Float16Quantization) Marshal(to []byte, lower float16Vec) error {
 	for i, n := range lower {
 		u := n.Bits()
-		binary.LittleEndian.PutUint16(out[i*2:], u)
+		binary.LittleEndian.PutUint16(to[i*2:], u)
 	}
-	return out, nil
+	return nil
 }
 
 func (q Float16Quantization) Unmarshal(data []byte) (float16Vec, error) {
@@ -51,4 +50,12 @@ func (q Float16Quantization) Unmarshal(data []byte) (float16Vec, error) {
 		out[i>>1] = float16.Frombits(bits)
 	}
 	return out, nil
+}
+
+func (q Float16Quantization) Name() string {
+	return "float16"
+}
+
+func (q Float16Quantization) LowerSize(dim int) int {
+	return 2 * dim
 }

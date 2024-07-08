@@ -18,8 +18,6 @@ func TestEmpericalCountBitmapConstant(t *testing.T) {
 		store.AddVector(ID(i), v)
 	}
 
-	store.BuildIndex()
-
 	count := 0
 	n := 0
 	for _, basisbms := range store.bms {

@@ -10,6 +10,7 @@ require (
 )
 
 require (
+	github.com/barakmich/mmap-go v0.0.0-20240708014031-bf5d4a307f6e // indirect
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
 	github.com/chewxy/math32 v1.10.1 // indirect
 	github.com/kelindar/simd v1.1.2 // indirect

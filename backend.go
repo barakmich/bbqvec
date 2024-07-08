@@ -11,6 +11,7 @@ type VectorBackend interface {
 	ComputeSimilarity(targetVector Vector, targetID ID) (float32, error)
 	Info() BackendInfo
 	Exists(id ID) bool
+	Close() error
 }
 
 type scannableBackend interface {
@@ -22,22 +23,19 @@ type VectorGetter[T any] interface {
 	GetVector(id ID) (T, error)
 }
 
-type CompilingBackend interface {
-	Compile(logger PrintfFunc) (VectorBackend, error)
-}
-
 type IndexBackend interface {
-	SaveBases(bases []Basis) error
+	SaveBases(bases []Basis, token uint64) (uint64, error)
 	LoadBases() ([]Basis, error)
 
 	SaveBitmap(basis int, index int, bitmap *roaring.Bitmap) error
 	LoadBitmap(basis, index int) (*roaring.Bitmap, error)
+	Sync() error
 }
 
 type BackendInfo struct {
 	HasIndexData bool
 	Dimensions   int
-	VectorCount  int
+	Quantization string
 }
 
 func FullTableScanSearch(be VectorBackend, target Vector, k int) (*ResultSet, error) {

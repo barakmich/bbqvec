@@ -58,7 +58,6 @@ func main() {
 
 	store.SetLogger(log.Printf)
 	start := time.Now()
-	store.BuildIndex()
 	log.Printf("Built store in %v", time.Since(start))
 
 	neighborf, err := os.Open(filepath.Join(*path, "neighbors.csv"))

@@ -15,13 +15,14 @@ const defaultMaxSampling = 10000
 type PrintfFunc func(string, ...any)
 
 type VectorStore struct {
-	logger     PrintfFunc
-	backend    VectorBackend
-	dimensions int
-	nbasis     int
-	bases      []Basis
-	bms        []map[int]*roaring.Bitmap
-	preSpill   int
+	logger        PrintfFunc
+	backend       VectorBackend
+	dimensions    int
+	nbasis        int
+	bases         []Basis
+	bms           []map[int]*roaring.Bitmap
+	preSpill      int
+	lastSaveToken uint64
 }
 
 func NewVectorStore(backend VectorBackend, nBasis int, preSpill int) (*VectorStore, error) {
@@ -165,32 +166,13 @@ func (vs *VectorStore) findIndexesForBasis(target Vector, basis Basis, buf []flo
 	}
 }
 
-func (vs *VectorStore) BuildIndex() error {
-	err := vs.Sync()
-	if err != nil {
-		return err
-	}
-
-	if be, ok := vs.backend.(CompilingBackend); ok {
-		vs.log("Compiling backend")
-		newbe, err := be.Compile(vs.log)
-		if err != nil {
-			return err
-		}
-		if newbe != nil {
-			vs.backend = newbe
-		}
-		vs.log("Completed compilation")
-	}
-	return nil
-}
-
 func (vs *VectorStore) Sync() error {
 	be, ok := vs.backend.(IndexBackend)
 	if !ok {
 		return nil
 	}
-	err := be.SaveBases(vs.bases)
+	var err error
+	vs.lastSaveToken, err = be.SaveBases(vs.bases, vs.lastSaveToken)
 	if err != nil {
 		return err
 	}
@@ -202,7 +184,7 @@ func (vs *VectorStore) Sync() error {
 			}
 		}
 	}
-	return nil
+	return be.Sync()
 }
 
 func (vs *VectorStore) makeBasis() error {

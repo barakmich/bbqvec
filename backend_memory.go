@@ -22,6 +22,10 @@ func NewMemoryBackend(dimensions int) *MemoryBackend {
 	}
 }
 
+func (mem *MemoryBackend) Close() error {
+	return nil
+}
+
 func (mem *MemoryBackend) PutVector(id ID, vector Vector) error {
 	if len(vector) != mem.dim {
 		return errors.New("MemoryBackend: vector dimension doesn't match")
@@ -55,7 +59,6 @@ func (mem *MemoryBackend) Info() BackendInfo {
 	return BackendInfo{
 		HasIndexData: false,
 		Dimensions:   mem.dim,
-		VectorCount:  len(mem.vecs),
 	}
 }
 

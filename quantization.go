@@ -10,8 +10,10 @@ import (
 type Quantization[L any] interface {
 	Similarity(x, y L) float32
 	Lower(v Vector) (L, error)
-	Marshal(lower L) ([]byte, error)
+	Marshal(to []byte, lower L) error
 	Unmarshal(data []byte) (L, error)
+	Name() string
+	LowerSize(dim int) int
 }
 
 var _ Quantization[Vector] = NoQuantization{}
@@ -26,13 +28,12 @@ func (q NoQuantization) Lower(v Vector) (Vector, error) {
 	return v, nil
 }
 
-func (q NoQuantization) Marshal(lower Vector) ([]byte, error) {
-	out := make([]byte, 4*len(lower))
+func (q NoQuantization) Marshal(to []byte, lower Vector) error {
 	for i, n := range lower {
 		u := math.Float32bits(n)
-		binary.LittleEndian.PutUint32(out[i*4:], u)
+		binary.LittleEndian.PutUint32(to[i*4:], u)
 	}
-	return out, nil
+	return nil
 }
 
 func (q NoQuantization) Unmarshal(data []byte) (Vector, error) {
@@ -42,4 +43,12 @@ func (q NoQuantization) Unmarshal(data []byte) (Vector, error) {
 		out[i>>2] = math.Float32frombits(bits)
 	}
 	return out, nil
+}
+
+func (q NoQuantization) Name() string {
+	return "none"
+}
+
+func (q NoQuantization) LowerSize(dim int) int {
+	return 4 * dim
 }

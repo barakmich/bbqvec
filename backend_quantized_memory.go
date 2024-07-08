@@ -24,6 +24,10 @@ func NewQuantizedMemoryBackend[V any, Q Quantization[V]](dimensions int, quantiz
 	}
 }
 
+func (q *QuantizedMemoryBackend[V, Q]) Close() error {
+	return nil
+}
+
 func (q *QuantizedMemoryBackend[V, Q]) PutVector(id ID, vector Vector) error {
 	if len(vector) != q.dim {
 		return errors.New("QuantizedMemoryBackend: vector dimension doesn't match")
@@ -66,7 +70,6 @@ func (q *QuantizedMemoryBackend[V, Q]) Info() BackendInfo {
 	return BackendInfo{
 		HasIndexData: false,
 		Dimensions:   q.dim,
-		VectorCount:  len(q.vecs),
 	}
 }
 

@@ -23,7 +23,6 @@ func TestBasic(t *testing.T) {
 	}
 
 	store.SetLogger(t.Logf)
-	store.BuildIndex()
 
 	target := NewRandVector(dim, nil)
 	indexNearest, err := store.FindNearest(target, k, searchk, 4)
