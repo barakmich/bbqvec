@@ -55,6 +55,14 @@ func NewVectorStore(backend VectorBackend, nBasis int, preSpill int) (*VectorSto
 	return v, nil
 }
 
+func (vs *VectorStore) Close() error {
+	err := vs.Sync()
+	if err != nil {
+		return err
+	}
+	return vs.backend.Close()
+}
+
 func (vs *VectorStore) SetLogger(printf PrintfFunc) {
 	vs.logger = printf
 }

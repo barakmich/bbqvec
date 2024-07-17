@@ -28,8 +28,6 @@ func BenchmarkMemoryStore(b *testing.B) {
 		store.AddVector(ID(i), v)
 	}
 
-	store.BuildIndex()
-
 	b.Run("Internal", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			v := NewRandVector(*dim, nil)
@@ -52,7 +50,6 @@ func BenchmarkParameters(b *testing.B) {
 		store.AddVector(ID(i), v)
 	}
 
-	store.BuildIndex()
 	targetvecs := NewRandVectorSet(*testvecs, *dim, nil)
 	res := make([]*ResultSet, *testvecs)
 	for i, v := range targetvecs {
@@ -68,9 +65,6 @@ func BenchmarkParameters(b *testing.B) {
 			})
 		}
 	}
-}
-
-func runBenchmark(b *testing.B, searchk, spill int, store *VectorStore) {
 }
 
 func benchQuality(b *testing.B, searchk, spill int, store *VectorStore, vecs []Vector, res []*ResultSet) {
