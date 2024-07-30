@@ -1,19 +1,25 @@
 package bbq
 
 import (
-	"os"
 	"testing"
 )
 
 func TestDiskBackend(t *testing.T) {
+	testDiskBackendQuantization(t, NoQuantization{})
+}
+
+func TestDiskBackendF16(t *testing.T) {
+	testDiskBackendQuantization(t, Float16Quantization{})
+}
+
+func testDiskBackendQuantization[L any](t *testing.T, q Quantization[L]) {
 	vecs := NewRandVectorSet(*nVectors, *dim, nil)
 
 	mem := NewMemoryBackend(*dim)
 
 	dir := t.TempDir()
-	defer os.RemoveAll(dir)
 	t.Log("TempDir:", dir)
-	be, err := NewDiskBackend(dir, *dim, NoQuantization{})
+	be, err := NewDiskBackend(dir, *dim, q)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +54,7 @@ func TestDiskBackend(t *testing.T) {
 	t.Log("Reopening")
 	// Reopen
 
-	be, err = NewDiskBackend(dir, *dim, NoQuantization{})
+	be, err = NewDiskBackend(dir, *dim, q)
 	if err != nil {
 		t.Fatal("Couldn't open disk backend", err)
 	}
