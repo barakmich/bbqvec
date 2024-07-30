@@ -118,7 +118,7 @@ func (d *DiskBackend[V]) openFiles() error {
 	}
 
 	for _, k := range d.metadata.VecFiles {
-		f, err := os.Open(mkPageFilepath(d.dir, k))
+		f, err := os.OpenFile(mkPageFilepath(d.dir, k), os.O_RDWR, 0755)
 		if err != nil {
 			return err
 		}
@@ -175,6 +175,11 @@ func (d *DiskBackend[V]) PutVector(id ID, v Vector) error {
 
 func (d *DiskBackend[V]) createPage(key int) (mmap.MMap, error) {
 	f, err := os.Create(mkPageFilepath(d.dir, key))
+	if err != nil {
+		return nil, err
+	}
+	vecsize := d.quantization.LowerSize(d.metadata.Dimensions)
+	err = f.Truncate(int64(vecsize * d.metadata.VecsPerFile))
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +304,8 @@ func (d *DiskBackend[V]) LoadBases() ([]Basis, error) {
 }
 
 func (d *DiskBackend[V]) SaveBitmap(basis int, index int, bitmap *roaring.Bitmap) error {
-	f, err := os.Create(mkBmapFilepath(d.dir, basis, index))
+	path := mkBmapFilepath(d.dir, basis, index)
+	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
@@ -311,6 +317,9 @@ func (d *DiskBackend[V]) SaveBitmap(basis int, index int, bitmap *roaring.Bitmap
 func (d *DiskBackend[V]) LoadBitmap(basis int, index int) (*roaring.Bitmap, error) {
 	f, err := os.Open(mkBmapFilepath(d.dir, basis, index))
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	bm := roaring.NewBitmap()
