@@ -13,6 +13,7 @@ var (
 	nBasis   = flag.Int("bases", 30, "Number of basis sets")
 	searchk  = flag.Int("searchk", 1000, "SearchK")
 	spill    = flag.Int("spill", 16, "Spill")
+	disk     = flag.Bool("disk", false, "Run tests against disk")
 )
 
 func BenchmarkMemoryStore(b *testing.B) {
@@ -40,20 +41,35 @@ func BenchmarkParameters(b *testing.B) {
 	//First, build the thing
 	vecs := NewRandVectorSet(*nVectors, *dim, nil)
 
-	be := NewMemoryBackend(*dim)
+	mem := NewMemoryBackend(*dim)
+
+	var be VectorBackend
+	if *disk {
+		dir := b.TempDir()
+		b.Log("TempDir:", dir)
+		var err error
+		be, err = NewDiskBackend(dir, *dim, NoQuantization{})
+		if err != nil {
+			b.Fatal(err)
+		}
+	} else {
+		be = NewMemoryBackend(*dim)
+	}
+
 	store, err := NewVectorStore(be, *nBasis, 1)
 	if err != nil {
 		b.Fatal(err)
 	}
 
 	for i, v := range vecs {
+		mem.PutVector(ID(i), v)
 		store.AddVector(ID(i), v)
 	}
 
 	targetvecs := NewRandVectorSet(*testvecs, *dim, nil)
 	res := make([]*ResultSet, *testvecs)
 	for i, v := range targetvecs {
-		res[i], err = FullTableScanSearch(be, v, 20)
+		res[i], err = FullTableScanSearch(mem, v, 20)
 		if err != nil {
 			b.Fatal(err)
 		}
