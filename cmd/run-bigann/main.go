@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/alitto/pond"
-	"github.com/barakmich/bbq"
+	bbq "github.com/daxe-ai/bbqvec"
 )
 
 var (
