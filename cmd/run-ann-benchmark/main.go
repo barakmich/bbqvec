@@ -75,19 +75,14 @@ func main() {
 	dim := len(train[0])
 	log.Println("Loading into memory")
 	be := bbq.NewMemoryBackend(dim)
+	//be := bbq.NewQuantizedMemoryBackend(dim, bbq.Float16Quantization{})
 	store, err := bbq.NewVectorStore(be, *bases, 1)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	start := time.Now()
-	for i, v := range train {
-		store.AddVector(bbq.ID(i), v)
-		if i%1000 == 0 {
-			log.Printf(".")
-		}
-	}
-	log.Printf("\n")
+	store.AddVectorsWithOffset(0, train)
 	store.SetLogger(log.Printf)
 	log.Printf("Built store in %v", time.Since(start))
 
@@ -125,12 +120,12 @@ func main() {
 	wg.Wait()
 	delta := time.Since(start)
 	qps := float64(len(test)) / delta.Seconds()
-	totalrecall := 0.0
+	totalrecall := 0.0 // ...what if this is a dream?
 	for i := range res {
 		totalrecall += res[i].ComputeRecall(trueres[i], 10)
 	}
 	recall := totalrecall / float64(len(res))
-	fmt.Printf("%0.4f,%0.4f", qps, recall)
+	fmt.Printf("%0.4f,%0.4f", recall, qps)
 }
 
 func loadVecs(f *os.File) []bbq.Vector {
