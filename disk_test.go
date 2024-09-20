@@ -23,7 +23,7 @@ func testDiskBackendQuantization[L any](t *testing.T, q Quantization[L]) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store, err := NewVectorStore(be, *nBasis, 1)
+	store, err := NewVectorStore(be, *nBasis)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func testDiskBackendQuantization[L any](t *testing.T, q Quantization[L]) {
 	if err != nil {
 		t.Fatal("Couldn't open disk backend", err)
 	}
-	store, err = NewVectorStore(be, *nBasis, 1)
+	store, err = NewVectorStore(be, *nBasis)
 	if err != nil {
 		t.Fatal("Couldn't open vector store", err)
 	}

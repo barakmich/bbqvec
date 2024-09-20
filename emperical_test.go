@@ -9,7 +9,7 @@ func TestEmpericalCountBitmapConstant(t *testing.T) {
 	vecs := NewRandVectorSet(*nVectors, *dim, nil)
 
 	be := NewMemoryBackend(*dim)
-	store, err := NewVectorStore(be, *nBasis, 1)
+	store, err := NewVectorStore(be, *nBasis)
 	if err != nil {
 		t.Fatal(err)
 	}

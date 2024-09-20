@@ -76,7 +76,7 @@ func main() {
 	log.Println("Loading into memory")
 	be := bbq.NewMemoryBackend(dim)
 	//be := bbq.NewQuantizedMemoryBackend(dim, bbq.Float16Quantization{})
-	store, err := bbq.NewVectorStore(be, *bases, 1)
+	store, err := bbq.NewVectorStore(be, *bases)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -25,20 +25,35 @@ type VectorStore struct {
 	lastSaveToken uint64
 }
 
-func NewVectorStore(backend VectorBackend, nBasis int, preSpill int) (*VectorStore, error) {
-	info := backend.Info()
-	if preSpill <= 0 {
-		preSpill = 1
-	} else if preSpill > info.Dimensions {
-		preSpill = info.Dimensions
+type VectorStoreOption func(vs *VectorStore) error
+
+func WithPrespill(prespill int) VectorStoreOption {
+	return func(vs *VectorStore) error {
+		if prespill <= 0 {
+			prespill = 1
+		} else if prespill > vs.dimensions {
+			prespill = vs.dimensions
+		}
+		vs.preSpill = prespill
+		return nil
 	}
+}
+
+func NewVectorStore(backend VectorBackend, nBasis int, opts ...VectorStoreOption) (*VectorStore, error) {
+	info := backend.Info()
 	v := &VectorStore{
 		dimensions: info.Dimensions,
 		nbasis:     nBasis,
 		backend:    backend,
 		bases:      make([]Basis, nBasis),
 		bms:        make([]map[int]*roaring.Bitmap, nBasis),
-		preSpill:   preSpill,
+		preSpill:   1,
+	}
+	for _, o := range opts {
+		err := o(v)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if info.HasIndexData {
 		err := v.loadFromBackend()

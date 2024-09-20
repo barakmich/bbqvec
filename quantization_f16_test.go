@@ -27,7 +27,7 @@ func TestFloat16Quantization(t *testing.T) {
 func TestFloat16Backend(t *testing.T) {
 	vecs := NewRandVectorSet(1000, *dim, nil)
 	quant := NewQuantizedMemoryBackend(*dim, Float16Quantization{})
-	store, err := NewVectorStore(quant, *nBasis, 2)
+	store, err := NewVectorStore(quant, *nBasis, WithPrespill(2))
 	if err != nil {
 		t.Fatal(err)
 	}

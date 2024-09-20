@@ -13,7 +13,7 @@ func TestBasic(t *testing.T) {
 	vecs := NewRandVectorSet(100000, dim, nil)
 
 	be := NewMemoryBackend(dim)
-	store, err := NewVectorStore(be, nBasis, 2)
+	store, err := NewVectorStore(be, nBasis, WithPrespill(2))
 	if err != nil {
 		t.Fatal(err)
 	}
