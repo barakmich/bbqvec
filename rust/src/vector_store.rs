@@ -133,6 +133,10 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
         }
         Ok(())
     }
+
+    pub fn full_table_scan(&self, vec: &Vector, k: usize) -> Result<ResultSet> {
+        self.backend.find_nearest(vec, k)
+    }
 }
 
 fn make_basis(n_basis: usize, dimensions: usize) -> Result<Vec<Basis>> {

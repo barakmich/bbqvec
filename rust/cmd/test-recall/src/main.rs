@@ -54,7 +54,10 @@ fn main() -> Result<()> {
 fn single_run_main() -> Result<()> {
     let store = make_store()?;
     let tests = bbqvec::create_vector_set(DIMENSIONS.flag, QUERIES.flag);
-    let fts_results = full_table_scan(&tests, &store)?;
+    let mut fts_results = Vec::with_capacity(tests.len());
+    for t in tests.iter() {
+        fts_results.push(store.full_table_scan(t, 20)?);
+    }
     let (results, took) = run_test(&tests, &store, SEARCH_K.flag, SPILL.flag)?;
     print_result_line(&fts_results, &results, SEARCH_K.flag, SPILL.flag, took)?;
     Ok(())
@@ -63,7 +66,10 @@ fn single_run_main() -> Result<()> {
 fn matrix_main() -> Result<()> {
     let store = make_store()?;
     let tests = bbqvec::create_vector_set(DIMENSIONS.flag, QUERIES.flag);
-    let fts_results = full_table_scan(&tests, &store)?;
+    let mut fts_results = Vec::with_capacity(tests.len());
+    for t in tests.iter() {
+        fts_results.push(store.full_table_scan(t, 20)?);
+    }
     for spill in [1, 4, 8, 16] {
         for searchk in [100, 500, 1000, 2000, 5000, 10000, 20000] {
             if DIMENSIONS.flag < spill {
@@ -76,28 +82,6 @@ fn matrix_main() -> Result<()> {
     Ok(())
 }
 
-fn full_table_scan(
-    tests: &Vec<Vector>,
-    store: &VectorStore<MemoryBackend, bbqvec::CRoaringBitmap>,
-) -> Result<Vec<ResultSet>> {
-    println!("Scanning table for reference results");
-    let mut out = Vec::with_capacity(tests.len());
-    let start = Instant::now();
-    let be = store.get_backend().unwrap();
-    for v in tests {
-        let res = bbqvec::full_table_scan_search(be, v, 20)?;
-        out.push(res)
-    }
-    let took = Instant::now().duration_since(start);
-    let per = took.as_millis() as f64 / tests.len() as f64;
-    println!(
-        "FTS took {:.4}s, (avg {:.4}ms per search)",
-        took.as_secs_f32(),
-        per
-    );
-    Ok(out)
-}
-
 fn make_store() -> Result<VectorStore<MemoryBackend, bbqvec::CRoaringBitmap>> {
     let data = bbqvec::create_vector_set(DIMENSIONS.flag, VECTORS.flag);
     println!("Made vectors");
@@ -105,8 +89,6 @@ fn make_store() -> Result<VectorStore<MemoryBackend, bbqvec::CRoaringBitmap>> {
     let mut store = bbqvec::VectorStore::new_croaring_bitmap(mem)?;
     store.add_vector_iter(data.enumerate_ids())?;
     println!("Added vectors");
-    store = store.build_index()?;
-    println!("Built store");
     Ok(store)
 }
 
