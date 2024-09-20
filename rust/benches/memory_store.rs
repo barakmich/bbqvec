@@ -9,7 +9,6 @@ pub fn criterion_benchmark_memory_store(c: &mut Criterion) {
     println!("Made store");
     store.add_vector_iter(data.enumerate_ids()).unwrap();
     println!("itered");
-    store = store.build_index().unwrap();
     println!("built");
     c.bench_with_input(BenchmarkId::new("find_nearest", "store"), &store, |b, s| {
         b.iter(|| {

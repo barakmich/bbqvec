@@ -4,21 +4,24 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use rand::{Rng, RngCore};
+use rand::RngCore;
 
 use crate::{
-    backend::{BackendInfo, BuildableBackend, IndexableBackend, VectorBackend},
-    Bitmap, Vector, ID,
+    backend::{BackendInfo, VectorBackend},
+    quantization::Quantization,
+    Vector, ID,
 };
 
-pub struct MemoryBackend {
-    vecs: Vec<Option<Vector>>,
+pub struct QuantizedMemoryBackend<Q: Quantization> {
+    vecs: Vec<Option<Q::Lower>>,
     dimensions: usize,
     n_basis: usize,
     rng: Option<Arc<Mutex<Box<dyn RngCore + Send>>>>,
 }
 
-impl MemoryBackend {
+pub type MemoryBackend = QuantizedMemoryBackend<crate::quantization::NoQuantization>;
+
+impl<Q: Quantization> QuantizedMemoryBackend<Q> {
     pub fn new(dimensions: usize, n_basis: usize) -> Result<Self> {
         Ok(Self {
             vecs: Vec::new(),
@@ -33,11 +36,7 @@ impl MemoryBackend {
     }
 }
 
-impl VectorBackend for MemoryBackend {
-    type Buildable = Self;
-    type Indexable = Self;
-    type CompiledBackend = Self;
-
+impl<Q: Quantization> VectorBackend for QuantizedMemoryBackend<Q> {
     fn put_vector(&mut self, id: crate::ID, v: &Vector) -> Result<()> {
         if v.len() != self.dimensions {
             return Err(anyhow!("dimensions don't match"));
@@ -51,14 +50,17 @@ impl VectorBackend for MemoryBackend {
         }
         let mut insert = v.clone();
         crate::vector::normalize(&mut insert);
-        self.vecs[uid] = Some(insert);
+        let l = Q::lower(insert)?;
+        self.vecs[uid] = Some(l);
         Ok(())
     }
 
     fn compute_similarity(&self, target: &Vector, target_id: crate::ID) -> Result<f32> {
         // Make sure it's normalized!
-        let v = self.vecs[target_id as usize].as_ref().unwrap();
-        Ok(crate::vector::dot_product(target, v))
+        let v = self.vecs[target_id as usize]
+            .as_ref()
+            .ok_or(anyhow!("No vector present"))?;
+        Q::compare(target, v)
     }
 
     fn info(&self) -> crate::backend::BackendInfo {
@@ -70,62 +72,31 @@ impl VectorBackend for MemoryBackend {
         }
     }
 
-    fn as_buildable_backend_mut(&mut self) -> Option<&mut Self::Buildable> {
-        Some(self)
-    }
-
-    fn as_buildable_backend(&self) -> Option<&Self::Buildable> {
-        Some(self)
-    }
-
-    fn as_indexable_backend(&mut self) -> Option<&mut Self::Indexable> {
-        None
-    }
-
-    fn compile(self) -> Result<Self::CompiledBackend> {
-        Ok(self)
-    }
-}
-
-impl BuildableBackend for MemoryBackend {
-    fn get_vector(&self, id: crate::ID) -> Result<Vector> {
-        let elem = self.vecs.get(id as usize).ok_or(anyhow!("out of bounds"))?;
-        elem.clone().ok_or(anyhow!("vector not found"))
-    }
-
-    fn get_random_vector(&self) -> Result<Vector> {
-        // This assumes a rather dense vector set... otherwise, use an ID lookup map
-        let x: usize = match self.rng {
-            Some(ref rng) => rng.lock().unwrap().gen_range(0..self.vecs.len()),
-            None => rand::thread_rng().gen_range(0..self.vecs.len()),
-        };
-        self.get_vector(x as ID)
-            .or_else(|_| self.get_random_vector())
-    }
-
-    fn iter_vecs(&self) -> impl Iterator<Item = (ID, &Vector)> {
+    fn iter_vector_ids(&self) -> impl Iterator<Item = ID> {
         self.vecs
             .iter()
             .enumerate()
             .filter(|(_, v)| v.is_some())
-            .map(|(k, v)| (k as ID, v.as_ref().unwrap()))
+            .map(|(k, _)| k as ID)
     }
-}
 
-impl IndexableBackend for MemoryBackend {
-    fn save_bases(&mut self, _bases: &[crate::Basis]) -> Result<()> {
+    fn vector_exists(&self, id: ID) -> bool {
+        let v = self.vecs.get(id as usize);
+        match v {
+            Some(x) => x.is_some(),
+            None => false,
+        }
+    }
+
+    fn close(self) -> Result<()> {
         todo!()
     }
 
-    fn load_bases(&self) -> Result<Vec<crate::Basis>> {
-        todo!()
+    fn load_bases(&self) -> Result<Option<Vec<crate::Basis>>> {
+        Ok(None)
     }
 
-    fn save_bitmap(&mut self, _basis: usize, _index: usize, _bitmap: &impl Bitmap) -> Result<()> {
-        todo!()
-    }
-
-    fn load_bitmap<T: Bitmap>(&mut self, _basis: usize, _index: usize) -> Result<T> {
-        todo!()
+    fn load_bitmap<T: crate::Bitmap>(&mut self, _basis: usize, _index: i32) -> Result<Option<T>> {
+        Ok(None)
     }
 }

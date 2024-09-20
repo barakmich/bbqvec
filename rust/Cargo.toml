@@ -6,7 +6,6 @@ repository = "https://github.com/daxe-ai/bbqvec"
 authors = ["Daxe, Inc.", "Barak Michener"]
 readme = "../README.md"
 license = "Apache-2.0"
-license-file = "../LICENSE"
 keywords = ["vector", "database", "ann", "knn", "bitmap", "search", "nearest-neighbor", "embedding", "embedded"]
 categories = ["algorithms", "data-structures", "database-implementations"]
 description = "Scalable, embeddable, vector storage for approximate K-nearest-neighbors (AKNN)"
@@ -21,6 +20,7 @@ bitvec = {version = "1", features = ["serde"]}
 bytemuck = {version = "1.16.0", features = ["derive", "extern_crate_alloc"]}
 byteorder = "1.5.0"
 croaring = "1.1.0"
+half = {version = "2.4.1", features = ["std", "zerocopy"]} 
 rand = "0.8.5"
 rayon = "1.10.0"
 roaring = {version = "0.10.4", features = ["serde"]}

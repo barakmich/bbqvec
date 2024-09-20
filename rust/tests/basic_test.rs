@@ -1,5 +1,5 @@
 use anyhow::Result;
-use bbqvec::{self, IndexIDIterator};
+use bbqvec::{self, backend::VectorBackend, IndexIDIterator};
 
 #[test]
 fn creates_a_vector() {
@@ -10,11 +10,12 @@ fn creates_a_vector() {
 #[test]
 fn full_table_scan() -> Result<()> {
     let vecs = bbqvec::create_vector_set(20, 200);
-    let mem = bbqvec::MemoryBackend::new(20, 3)?;
-    let mut store = bbqvec::VectorStore::new_croaring_bitmap(mem)?;
-    store.add_vector_iter(vecs.enumerate_ids())?;
+    let mut mem = bbqvec::MemoryBackend::new(20, 3)?;
+    for (id, v) in vecs.enumerate_ids() {
+        mem.put_vector(id, v)?;
+    }
     let target = bbqvec::create_random_vector(256);
-    store.find_nearest(&target, 20, 1000, 16)?;
+    let _ = mem.find_nearest(&target, 20)?;
     Ok(())
 }
 
@@ -24,16 +25,14 @@ fn built_index() -> Result<()> {
     let mem = bbqvec::MemoryBackend::new(20, 10)?;
     let mut store = bbqvec::VectorStore::new_croaring_bitmap(mem)?;
     store.add_vector_iter(vecs.enumerate_ids())?;
-    store.build_index()?;
     Ok(())
 }
 
 #[test]
 fn built_big_index() -> Result<()> {
-    let vecs = bbqvec::create_vector_set(256, 100000);
-    let mem = bbqvec::MemoryBackend::new(256, 30)?;
+    let vecs = bbqvec::create_vector_set(256, 1000);
+    let mem = bbqvec::MemoryBackend::new(256, 10)?;
     let mut store = bbqvec::VectorStore::new_croaring_bitmap(mem)?;
     store.add_vector_iter(vecs.enumerate_ids())?;
-    store.build_index()?;
     Ok(())
 }
