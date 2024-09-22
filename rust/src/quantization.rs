@@ -36,13 +36,13 @@ impl Quantization for NoQuantization {
     }
 
     fn vector_size(dimensions: usize) -> usize {
-        return 4 * dimensions;
+        4 * dimensions
     }
 
     fn marshal(v: &Self::Lower, array: &mut [u8]) -> Result<()> {
         for (i, f) in v.iter().enumerate() {
             let bytes = f.to_le_bytes();
-            &array[i * 4..i * 4 + 4].copy_from_slice(&bytes);
+            let _ = &array[i * 4..i * 4 + 4].copy_from_slice(&bytes);
         }
         Ok(())
     }
@@ -84,13 +84,13 @@ impl Quantization for BF16Quantization {
     }
 
     fn vector_size(dimensions: usize) -> usize {
-        return 2 * dimensions;
+        2 * dimensions
     }
 
     fn marshal(v: &Self::Lower, array: &mut [u8]) -> Result<()> {
         for (i, f) in v.iter().enumerate() {
             let bytes = f.to_le_bytes();
-            &array[i * 2..i * 2 + 2].copy_from_slice(&bytes);
+            let _ = &array[i * 2..i * 2 + 2].copy_from_slice(&bytes);
         }
         Ok(())
     }

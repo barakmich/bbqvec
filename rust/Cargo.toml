@@ -25,7 +25,7 @@ memmap2 = "0.9.5"
 rand = "0.8.5"
 rayon = "1.10.0"
 roaring = {version = "0.10.4", features = ["serde"]}
-serde = "1.0.203"
+serde = {version = "1.0.203", features = ["derive"]}
 thiserror = "1.0.61"
 
 [dev-dependencies]
