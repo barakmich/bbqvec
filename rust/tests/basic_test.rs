@@ -29,6 +29,15 @@ fn built_index() -> Result<()> {
 }
 
 #[test]
+fn built_quantized_index() -> Result<()> {
+    let vecs = bbqvec::create_vector_set(20, 2000);
+    let mem = bbqvec::QuantizedMemoryBackend::<bbqvec::BF16Quantization>::new(20, 10)?;
+    let mut store = bbqvec::VectorStore::new_croaring_bitmap(mem)?;
+    store.add_vector_iter(vecs.enumerate_ids())?;
+    Ok(())
+}
+
+#[test]
 fn built_big_index() -> Result<()> {
     let vecs = bbqvec::create_vector_set(256, 1000);
     let mem = bbqvec::MemoryBackend::new(256, 10)?;

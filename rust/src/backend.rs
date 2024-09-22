@@ -3,6 +3,7 @@ use anyhow::Result;
 use crate::{Basis, Bitmap, ResultSet, Vector, ID};
 
 pub struct BackendInfo {
+    pub quantization: String,
     pub has_index_data: bool,
     pub dimensions: usize,
     pub n_basis: usize,

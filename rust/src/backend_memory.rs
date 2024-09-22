@@ -69,6 +69,7 @@ impl<Q: Quantization> VectorBackend for QuantizedMemoryBackend<Q> {
             dimensions: self.dimensions,
             n_basis: self.n_basis,
             vector_count: self.vecs.len(),
+            quantization: Q::name().into(),
         }
     }
 

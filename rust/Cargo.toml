@@ -21,6 +21,7 @@ bytemuck = {version = "1.16.0", features = ["derive", "extern_crate_alloc"]}
 byteorder = "1.5.0"
 croaring = "1.1.0"
 half = {version = "2.4.1", features = ["std", "zerocopy"]} 
+memmap2 = "0.9.5"
 rand = "0.8.5"
 rayon = "1.10.0"
 roaring = {version = "0.10.4", features = ["serde"]}
