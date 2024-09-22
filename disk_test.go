@@ -37,7 +37,7 @@ func testDiskBackendQuantization[L any](t *testing.T, q Quantization[L]) {
 		if err != nil {
 			t.Fatal("error store put", err)
 		}
-		if i%1000 == 0 {
+		if i%10000 == 0 {
 			t.Log("Wrote", i)
 		}
 	}
