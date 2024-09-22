@@ -66,7 +66,7 @@ fn main() -> Result<()> {
 
   // Initialize the store
   let mem = bbqvec::MemoryBackend::new(dimensions, n_basis)?;
-  let mut store = bbqvec::VectorStore::new_croaring_bitmap(mem)?;
+  let mut store = bbqvec::VectorStore::new(mem)?;
 
   // Create some test data, 100K random vectors
   let vecs = bbqvec::create_vector_set(dimensions, 100000);
@@ -85,11 +85,12 @@ fn main() -> Result<()> {
 ```
 
 # TODOs
+
 ## Go
-[ ] More benchmarks
+- [ ] More benchmarks
+-
 ## Rust
-[ ] Disk backend
-[ ]
+- [ ] Disk backend
 
 
 ### Acknowledgements

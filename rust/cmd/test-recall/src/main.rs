@@ -86,7 +86,7 @@ fn make_store() -> Result<VectorStore<MemoryBackend, bbqvec::CRoaringBitmap>> {
     let data = bbqvec::create_vector_set(DIMENSIONS.flag, VECTORS.flag);
     println!("Made vectors");
     let mem = bbqvec::MemoryBackend::new(DIMENSIONS.flag, BASES.flag)?;
-    let mut store = bbqvec::VectorStore::new_croaring_bitmap(mem)?;
+    let mut store = bbqvec::VectorStore::new(mem)?;
     store.add_vector_iter(data.enumerate_ids())?;
     println!("Added vectors");
     Ok(store)
