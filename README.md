@@ -4,6 +4,8 @@
 [![license](https://img.shields.io/github/license/daxe-ai/bbqvec)](LICENSE)
 [![GoDoc](https://godoc.org/github.com/daxe-ai/bbqvec?status.svg)](https://godoc.org/github.com/daxe-ai/bbqvec)
 [![Crates.io](https://img.shields.io/crates/v/bbqvec)](https://crates.io/crates/bbqvec)
+[![Go CI](https://github.com/daxe-ai/bbqvec/actions/workflows/go.yml/badge.svg)](https://github.com/daxe-ai/bbqvec/actions/workflows/go.yml)
+[![Rust CI](https://github.com/daxe-ai/bbqvec/actions/workflows/rust.yml/badge.svg)](https://github.com/daxe-ai/bbqvec/actions/workflows/rust.yml)
 
 BBQvec is an open-source, embedded vector database index for Go and Rust, providing approximate K-nearest-neighbors (aKNN).
 
