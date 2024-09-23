@@ -1,6 +1,5 @@
 pub(crate) mod counting_bitmap;
 pub(crate) mod quantization;
-pub(crate) mod vector_file;
 pub use quantization::BF16Quantization;
 pub use quantization::NoQuantization;
 
@@ -17,8 +16,9 @@ pub(crate) mod backend_memory;
 pub use backend_memory::MemoryBackend;
 pub use backend_memory::QuantizedMemoryBackend;
 
-pub(crate) mod backend_disk;
-pub use backend_disk::DiskBackend;
+//pub(crate) mod vector_file;
+//pub(crate) mod backend_disk;
+//pub use backend_disk::DiskBackend;
 
 pub mod vector;
 

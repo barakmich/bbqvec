@@ -86,11 +86,16 @@ fn main() -> Result<()> {
 
 # TODOs
 
+We're still early; Go is the more tried-and-true and suits the beta use-case, but Rust is a good deal faster. We welcome contributions.
+
 ## Go
 - [ ] More benchmarks
--
+- [ ] New Quantizations
+  - [ ] Hamming Distance (single-bit vectors)
+  - [ ] Novel quantizations
 ## Rust
-- [ ] Disk backend
+- [ ] Finish disk backend to match Go (in progress, shortly)
+- [ ] New Quantizations
 
 
 ### Acknowledgements

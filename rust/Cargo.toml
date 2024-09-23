@@ -1,12 +1,12 @@
 [package]
 name = "bbqvec"
-version = "0.1.0"
+version = "0.0.9"
 edition = "2021"
 repository = "https://github.com/daxe-ai/bbqvec"
-authors = ["Daxe, Inc.", "Barak Michener"]
+authors = ["Daxe, Inc.", "Barak Michener <barak@daxe.ai>"]
 readme = "../README.md"
 license = "Apache-2.0"
-keywords = ["vector", "database", "ann", "knn", "bitmap", "search", "nearest-neighbor", "embedding", "embedded"]
+keywords = ["vector", "database", "aknn", "search", "nearest-neighbor"]
 categories = ["algorithms", "data-structures", "database-implementations"]
 description = "Scalable, embeddable, vector storage for approximate K-nearest-neighbors (AKNN)"
 
