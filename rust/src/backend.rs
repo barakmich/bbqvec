@@ -38,7 +38,7 @@ pub trait VectorBackend {
         Ok(())
     }
 
-    fn sync(&mut self) -> Result<()> {
+    fn sync(&self) -> Result<()> {
         Ok(())
     }
 }
