@@ -9,7 +9,7 @@
 
 BBQvec is an open-source, embedded vector database index for Go and Rust, providing approximate K-nearest-neighbors (aKNN).
 
-[Read more about the algorithm!](https://example.com)
+[Read more about the algorithm on our blog!](https://open.substack.com/pub/daxeblog/p/bbqvec-a-scalable-vector-search-library?r=4gk2js&utm_campaign=post&utm_medium=web&showWelcomeOnShare=true)
 
 # Getting Started
 
