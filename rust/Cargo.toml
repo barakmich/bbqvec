@@ -1,9 +1,9 @@
 [package]
 name = "bbqvec"
-version = "0.0.9"
+version = "0.0.10"
 edition = "2021"
 repository = "https://github.com/daxe-ai/bbqvec"
-authors = ["Daxe, Inc.", "Barak Michener <barak@daxe.ai>"]
+authors = ["Barak Michener <me@barakmich.com>"]
 readme = "../README.md"
 license = "Apache-2.0"
 keywords = ["vector", "database", "aknn", "search", "nearest-neighbor"]
