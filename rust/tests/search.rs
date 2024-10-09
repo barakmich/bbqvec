@@ -3,7 +3,7 @@ use bbqvec::{self, IndexIDIterator};
 
 #[test]
 fn search_index() -> Result<()> {
-    let data = bbqvec::create_vector_set(10, 100000);
+    let data = bbqvec::create_vector_set(10, 100_000);
     let mem = bbqvec::MemoryBackend::new(10, 10)?;
     let mut store = bbqvec::VectorStore::new_croaring_bitmap(mem)?;
     println!("Made store");

@@ -1,3 +1,4 @@
+#[allow(clippy::wildcard_imports)]
 use std::arch::x86_64::*;
 use std::ptr::read_unaligned;
 
@@ -12,6 +13,12 @@ unsafe fn hsum256_ps_avx(x: __m256) -> f32 {
     _mm_cvtss_f32(x32)
 }
 
+#[allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_ptr_alignment,
+    clippy::many_single_char_names,
+    clippy::similar_names
+)]
 #[target_feature(enable = "avx")]
 #[target_feature(enable = "fma")]
 pub(crate) unsafe fn euclid_similarity_avx(v1: &UnalignedF32Slice, v2: &UnalignedF32Slice) -> f32 {
@@ -61,6 +68,11 @@ pub(crate) unsafe fn euclid_similarity_avx(v1: &UnalignedF32Slice, v2: &Unaligne
     result
 }
 
+#[allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_ptr_alignment,
+    clippy::many_single_char_names
+)]
 #[target_feature(enable = "avx")]
 #[target_feature(enable = "fma")]
 pub(crate) unsafe fn dot_similarity_avx(v1: &UnalignedF32Slice, v2: &UnalignedF32Slice) -> f32 {
@@ -140,11 +152,11 @@ mod tests {
 
             let euclid_simd = unsafe { euclid_similarity_avx(v1, v2) };
             let euclid = euclidean_distance_non_optimized(v1, v2);
-            assert_eq!(euclid_simd, euclid);
+            assert!((euclid_simd - euclid).abs() < f32::EPSILON);
 
             let dot_simd = unsafe { dot_similarity_avx(v1, v2) };
             let dot = dot_product_non_optimized(v1, v2);
-            assert_eq!(dot_simd, dot);
+            assert!((dot_simd - dot).abs() < f32::EPSILON);
 
             // let cosine_simd = unsafe { cosine_preprocess_avx(v1.clone()) };
             // let cosine = cosine_preprocess(v1);

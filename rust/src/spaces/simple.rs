@@ -1,7 +1,10 @@
+#[allow(clippy::wildcard_imports)]
 #[cfg(target_arch = "x86_64")]
 use super::simple_avx::*;
+#[allow(clippy::wildcard_imports)]
 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
 use super::simple_neon::*;
+#[allow(clippy::wildcard_imports)]
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 use super::simple_sse::*;
 use crate::unaligned_f32::UnalignedF32Slice;

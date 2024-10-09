@@ -2,6 +2,7 @@ use crate::{vector::distance, Vector};
 use anyhow::Result;
 use half::{bf16, vec::HalfFloatVecExt};
 
+#[allow(clippy::module_name_repetitions)]
 pub trait Quantization: Default {
     type Lower: Clone;
     fn similarity(x: &Self::Lower, y: &Self::Lower) -> Result<f32>;
@@ -13,6 +14,7 @@ pub trait Quantization: Default {
     fn name() -> &'static str;
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Default)]
 pub struct NoQuantization {}
 
@@ -42,7 +44,7 @@ impl Quantization for NoQuantization {
     fn marshal(v: &Self::Lower, array: &mut [u8]) -> Result<()> {
         for (i, f) in v.iter().enumerate() {
             let bytes = f.to_le_bytes();
-            let _ = &array[i * 4..i * 4 + 4].copy_from_slice(&bytes);
+            let () = &array[i * 4..i * 4 + 4].copy_from_slice(&bytes);
         }
         Ok(())
     }
@@ -58,6 +60,7 @@ impl Quantization for NoQuantization {
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Default)]
 pub struct BF16Quantization {}
 
@@ -90,7 +93,7 @@ impl Quantization for BF16Quantization {
     fn marshal(v: &Self::Lower, array: &mut [u8]) -> Result<()> {
         for (i, f) in v.iter().enumerate() {
             let bytes = f.to_le_bytes();
-            let _ = &array[i * 2..i * 2 + 2].copy_from_slice(&bytes);
+            let () = &array[i * 2..i * 2 + 2].copy_from_slice(&bytes);
         }
         Ok(())
     }
