@@ -63,7 +63,7 @@ impl UnalignedF32Slice {
 
 impl<'a> From<&'a crate::Vector> for &'a UnalignedF32Slice {
     fn from(value: &'a Vec<f32>) -> Self {
-        UnalignedF32Slice::from_slice(value.as_slice())
+        UnalignedF32Slice::from_slice(value)
     }
 }
 
