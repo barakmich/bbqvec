@@ -50,9 +50,15 @@ impl Quantization for NoQuantization {
     }
 
     fn unmarshal(array: &[u8]) -> Result<Self::Lower> {
-        let mut vec = Vec::new();
-        for i in (0..array.len()).step_by(4) {
-            let bytes = &array[i..i + 4];
+        let (capacity, _remainder) = (array.len() / 4, array.len() % 4);
+        /*
+        if remainder != 0 {
+            can return err rather than panic from unwrap
+            also if do so can make it chunks_exact instead of chunks
+        }
+        */
+        let mut vec = Vec::with_capacity(capacity);
+        for bytes in array.chunks(4) {
             let f: f32 = f32::from_le_bytes(bytes.try_into().unwrap());
             vec.push(f);
         }
@@ -99,9 +105,8 @@ impl Quantization for BF16Quantization {
     }
 
     fn unmarshal(array: &[u8]) -> Result<Self::Lower> {
-        let mut vec = Vec::new();
-        for i in (0..array.len()).step_by(2) {
-            let bytes = &array[i..i + 2];
+        let mut vec = Vec::with_capacity(array.len() / 2);
+        for bytes in array.chunks(2) {
             let f: bf16 = bf16::from_le_bytes(bytes.try_into().unwrap());
             vec.push(f);
         }
