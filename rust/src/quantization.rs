@@ -2,6 +2,7 @@ use crate::{vector::distance, Vector};
 use anyhow::Result;
 use half::{bf16, vec::HalfFloatVecExt};
 
+#[allow(clippy::module_name_repetitions)]
 pub trait Quantization: Default {
     type Lower: Clone;
     fn similarity(x: &Self::Lower, y: &Self::Lower) -> Result<f32>;
@@ -13,6 +14,7 @@ pub trait Quantization: Default {
     fn name() -> &'static str;
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Default)]
 pub struct NoQuantization {}
 
@@ -42,15 +44,21 @@ impl Quantization for NoQuantization {
     fn marshal(v: &Self::Lower, array: &mut [u8]) -> Result<()> {
         for (i, f) in v.iter().enumerate() {
             let bytes = f.to_le_bytes();
-            let _ = &array[i * 4..i * 4 + 4].copy_from_slice(&bytes);
+            let () = &array[i * 4..i * 4 + 4].copy_from_slice(&bytes);
         }
         Ok(())
     }
 
     fn unmarshal(array: &[u8]) -> Result<Self::Lower> {
-        let mut vec = Vec::new();
-        for i in (0..array.len()).step_by(4) {
-            let bytes = &array[i..i + 4];
+        let (capacity, _remainder) = (array.len() / 4, array.len() % 4);
+        /*
+        if remainder != 0 {
+            can return err rather than panic from unwrap
+            also if do so can make it chunks_exact instead of chunks
+        }
+        */
+        let mut vec = Vec::with_capacity(capacity);
+        for bytes in array.chunks(4) {
             let f: f32 = f32::from_le_bytes(bytes.try_into().unwrap());
             vec.push(f);
         }
@@ -58,6 +66,7 @@ impl Quantization for NoQuantization {
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Default)]
 pub struct BF16Quantization {}
 
@@ -90,15 +99,14 @@ impl Quantization for BF16Quantization {
     fn marshal(v: &Self::Lower, array: &mut [u8]) -> Result<()> {
         for (i, f) in v.iter().enumerate() {
             let bytes = f.to_le_bytes();
-            let _ = &array[i * 2..i * 2 + 2].copy_from_slice(&bytes);
+            let () = &array[i * 2..i * 2 + 2].copy_from_slice(&bytes);
         }
         Ok(())
     }
 
     fn unmarshal(array: &[u8]) -> Result<Self::Lower> {
-        let mut vec = Vec::new();
-        for i in (0..array.len()).step_by(2) {
-            let bytes = &array[i..i + 2];
+        let mut vec = Vec::with_capacity(array.len() / 2);
+        for bytes in array.chunks(2) {
             let f: bf16 = bf16::from_le_bytes(bytes.try_into().unwrap());
             vec.push(f);
         }

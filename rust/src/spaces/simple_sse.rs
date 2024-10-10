@@ -1,5 +1,7 @@
+#[allow(clippy::wildcard_imports)]
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
+#[allow(clippy::wildcard_imports)]
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 use std::ptr::read_unaligned;
@@ -13,6 +15,12 @@ unsafe fn hsum128_ps_sse(x: __m128) -> f32 {
     _mm_cvtss_f32(x32)
 }
 
+#[allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_ptr_alignment,
+    clippy::many_single_char_names,
+    clippy::similar_names
+)]
 #[allow(dead_code)]
 #[target_feature(enable = "sse")]
 pub(crate) unsafe fn euclid_similarity_sse(v1: &UnalignedF32Slice, v2: &UnalignedF32Slice) -> f32 {
@@ -58,6 +66,11 @@ pub(crate) unsafe fn euclid_similarity_sse(v1: &UnalignedF32Slice, v2: &Unaligne
     result
 }
 
+#[allow(
+    clippy::ptr_as_ptr,
+    clippy::cast_ptr_alignment,
+    clippy::many_single_char_names
+)]
 #[target_feature(enable = "sse")]
 pub(crate) unsafe fn dot_similarity_sse(v1: &UnalignedF32Slice, v2: &UnalignedF32Slice) -> f32 {
     // It is safe to load unaligned floats from a pointer.
@@ -134,11 +147,11 @@ mod tests {
 
             let euclid_simd = unsafe { euclid_similarity_sse(v1, v2) };
             let euclid = euclidean_distance_non_optimized(v1, v2);
-            assert_eq!(euclid_simd, euclid);
+            assert!((euclid_simd - euclid).abs() < f32::EPSILON);
 
             let dot_simd = unsafe { dot_similarity_sse(v1, v2) };
             let dot = dot_product_non_optimized(v1, v2);
-            assert_eq!(dot_simd, dot);
+            assert!((dot_simd - dot).abs() < f32::EPSILON);
 
             // let cosine_simd = unsafe { cosine_preprocess_sse(v1.clone()) };
             // let cosine = cosine_preprocess(v1);
