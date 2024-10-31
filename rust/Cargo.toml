@@ -2,7 +2,7 @@
 name = "bbqvec"
 version = "0.0.10"
 edition = "2021"
-repository = "https://github.com/daxe-ai/bbqvec"
+repository = "https://github.com/barakmich/bbqvec"
 authors = ["Barak Michener <me@barakmich.com>"]
 readme = "../README.md"
 license = "Apache-2.0"

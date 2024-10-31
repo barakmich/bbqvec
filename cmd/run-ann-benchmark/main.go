@@ -16,7 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	bbq "github.com/daxe-ai/bbqvec"
+	bbq "github.com/barakmich/bbqvec"
 )
 
 var (

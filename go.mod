@@ -1,4 +1,4 @@
-module github.com/daxe-ai/bbqvec
+module github.com/barakmich/bbqvec
 
 go 1.22.3
 

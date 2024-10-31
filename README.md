@@ -1,15 +1,13 @@
 ![BBQvec Logo](.github/bbqvec.png)
 
 ![Status](https://img.shields.io/badge/status-beta-blue)
-[![license](https://img.shields.io/github/license/daxe-ai/bbqvec)](LICENSE)
-[![GoDoc](https://godoc.org/github.com/daxe-ai/bbqvec?status.svg)](https://godoc.org/github.com/daxe-ai/bbqvec)
+[![license](https://img.shields.io/github/license/barakmich/bbqvec)](LICENSE)
+[![GoDoc](https://godoc.org/github.com/barakmich/bbqvec?status.svg)](https://godoc.org/github.com/barakmich/bbqvec)
 [![Crates.io](https://img.shields.io/crates/v/bbqvec)](https://crates.io/crates/bbqvec)
-[![Go CI](https://github.com/daxe-ai/bbqvec/actions/workflows/go.yml/badge.svg)](https://github.com/daxe-ai/bbqvec/actions/workflows/go.yml)
-[![Rust CI](https://github.com/daxe-ai/bbqvec/actions/workflows/rust.yml/badge.svg)](https://github.com/daxe-ai/bbqvec/actions/workflows/rust.yml)
+[![Go CI](https://github.com/barakmich/bbqvec/actions/workflows/go.yml/badge.svg)](https://github.com/barakmich/bbqvec/actions/workflows/go.yml)
+[![Rust CI](https://github.com/barakmich/bbqvec/actions/workflows/rust.yml/badge.svg)](https://github.com/barakmich/bbqvec/actions/workflows/rust.yml)
 
 BBQvec is an open-source, embedded vector database index for Go and Rust, providing approximate K-nearest-neighbors (aKNN).
-
-[Read more about the algorithm on our blog!](https://open.substack.com/pub/daxeblog/p/bbqvec-a-scalable-vector-search-library?r=4gk2js&utm_campaign=post&utm_medium=web&showWelcomeOnShare=true)
 
 # Getting Started
 
@@ -21,7 +19,7 @@ package main
 import (
   "fmt"
 
-  bbq "github.com/daxe-ai/bbqvec"
+  bbq "github.com/barakmich/bbqvec"
 )
 
 func main() {
