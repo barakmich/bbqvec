@@ -33,7 +33,10 @@ impl<B: Bitmap> CountingBitmap<B> {
     }
 
     pub fn cardinalities(&self) -> Vec<usize> {
-        self.bitmaps.iter().map(|b| b.count()).collect::<Vec<_>>()
+        self.bitmaps
+            .iter()
+            .map(super::bitmaps::Bitmap::count)
+            .collect::<Vec<_>>()
     }
 
     pub fn top_k(&self, search_k: usize) -> Option<&B> {

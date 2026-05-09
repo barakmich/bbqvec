@@ -22,6 +22,8 @@ pub struct QuantizedMemoryBackend<Q: Quantization> {
 pub type MemoryBackend = QuantizedMemoryBackend<crate::quantization::NoQuantization>;
 
 impl<Q: Quantization> QuantizedMemoryBackend<Q> {
+    /// # Errors
+    /// none
     pub fn new(dimensions: usize, n_basis: usize) -> Result<Self> {
         Ok(Self {
             vecs: Vec::new(),
@@ -41,10 +43,11 @@ impl<Q: Quantization> VectorBackend for QuantizedMemoryBackend<Q> {
         if v.len() != self.dimensions {
             return Err(anyhow!("dimensions don't match"));
         }
+        #[allow(clippy::cast_possible_truncation)]
         let uid = id as usize;
         if self.vecs.len() <= uid {
             if self.vecs.capacity() == uid {
-                self.vecs.reserve(min(self.vecs.capacity(), 1024 * 1024))
+                self.vecs.reserve(min(self.vecs.capacity(), 1024 * 1024));
             }
             self.vecs.resize(uid + 1, None);
         }
@@ -57,6 +60,7 @@ impl<Q: Quantization> VectorBackend for QuantizedMemoryBackend<Q> {
 
     fn compute_similarity(&self, target: &Vector, target_id: crate::ID) -> Result<f32> {
         // Make sure it's normalized!
+        #[allow(clippy::cast_possible_truncation)]
         let v = self.vecs[target_id as usize]
             .as_ref()
             .ok_or(anyhow!("No vector present"))?;
@@ -82,6 +86,7 @@ impl<Q: Quantization> VectorBackend for QuantizedMemoryBackend<Q> {
     }
 
     fn vector_exists(&self, id: ID) -> bool {
+        #[allow(clippy::cast_possible_truncation)]
         let v = self.vecs.get(id as usize);
         match v {
             Some(x) => x.is_some(),

@@ -9,6 +9,7 @@ use std::{
 use bytemuck::cast_slice;
 use byteorder::ByteOrder;
 
+#[allow(clippy::module_name_repetitions)]
 /// A wrapper struct that is used to read unaligned floats directly from memory.
 #[repr(transparent)]
 pub struct UnalignedF32Slice([u8]);
@@ -17,6 +18,7 @@ impl UnalignedF32Slice {
     /// Creates an unaligned slice of f32 wrapper from a slice of bytes.
     pub fn from_bytes(bytes: &[u8]) -> anyhow::Result<&Self> {
         if bytes.len() % size_of::<f32>() == 0 {
+            #[allow(clippy::transmute_ptr_to_ptr, clippy::missing_transmute_annotations)]
             Ok(unsafe { transmute(bytes) })
         } else {
             Err(anyhow::anyhow!("Byte size mismatch to f32"))
@@ -61,7 +63,7 @@ impl UnalignedF32Slice {
 
 impl<'a> From<&'a crate::Vector> for &'a UnalignedF32Slice {
     fn from(value: &'a Vec<f32>) -> Self {
-        UnalignedF32Slice::from_slice(value.as_slice())
+        UnalignedF32Slice::from_slice(value)
     }
 }
 

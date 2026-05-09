@@ -1,11 +1,13 @@
 use crate::ID;
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct SearchResult {
     pub similarity: f32,
     pub id: ID,
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct ResultSet {
     sims: Vec<f32>,
@@ -15,6 +17,7 @@ pub struct ResultSet {
 }
 
 impl ResultSet {
+    #[must_use]
     pub fn new(k: usize) -> Self {
         Self {
             sims: Vec::with_capacity(k),
@@ -24,14 +27,18 @@ impl ResultSet {
         }
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.sims.len()
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.sims.is_empty()
     }
 
+    #[allow(clippy::cast_precision_loss, clippy::cast_lossless)]
+    #[must_use]
     pub fn compute_recall(&self, baseline: &ResultSet, at: usize) -> f64 {
         let mut found = 0;
         for x in baseline.ids.iter().take(at) {

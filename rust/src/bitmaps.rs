@@ -26,25 +26,28 @@ impl Bitmap for roaring::RoaringBitmap {
         self.is_empty()
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     fn count(&self) -> usize {
         self.len() as usize
     }
 
     fn add(&mut self, id: ID) {
+        #[allow(clippy::cast_possible_truncation)]
         self.insert(id as u32);
     }
 
     fn iter_elems(&self) -> impl Iterator<Item = ID> {
+        #[allow(clippy::cast_lossless)]
         self.iter().map(|x| x as ID)
     }
     fn and_not(&mut self, rhs: &Self) {
-        self.sub_assign(rhs)
+        self.sub_assign(rhs);
     }
     fn or(&mut self, rhs: &Self) {
-        self.bitor_assign(rhs)
+        self.bitor_assign(rhs);
     }
     fn xor(&mut self, rhs: &Self) {
-        self.bitxor_assign(rhs)
+        self.bitxor_assign(rhs);
     }
     fn estimate_size(&self) -> usize {
         self.serialized_size()
@@ -64,11 +67,12 @@ impl Bitmap for bitvec::prelude::BitVec {
         self.is_empty()
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     fn add(&mut self, id: ID) {
         if self.len() <= id as usize {
-            self.resize((id + 1) as usize, false)
+            self.resize((id + 1) as usize, false);
         }
-        self.set(id as usize, true)
+        self.set(id as usize, true);
     }
 
     fn iter_elems(&self) -> impl Iterator<Item = ID> {
@@ -78,24 +82,24 @@ impl Bitmap for bitvec::prelude::BitVec {
     #[inline]
     fn and_not(&mut self, rhs: &Self) {
         for elem in self.as_raw_mut_slice().iter_mut().zip(rhs.as_raw_slice()) {
-            *elem.0 &= !elem.1
+            *elem.0 &= !elem.1;
         }
     }
 
     #[inline]
     fn or(&mut self, rhs: &Self) {
         if self.len() < rhs.len() {
-            self.resize(rhs.len(), false)
+            self.resize(rhs.len(), false);
         }
-        self.bitor_assign(rhs)
+        self.bitor_assign(rhs);
     }
 
     #[inline]
     fn xor(&mut self, rhs: &Self) {
         if self.len() < rhs.len() {
-            self.resize(rhs.len(), false)
+            self.resize(rhs.len(), false);
         }
-        self.bitxor_assign(rhs)
+        self.bitxor_assign(rhs);
     }
 
     fn estimate_size(&self) -> usize {
@@ -112,28 +116,31 @@ impl Bitmap for croaring::Bitmap {
         self.is_empty()
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     fn count(&self) -> usize {
         self.cardinality() as usize
     }
 
     fn add(&mut self, id: ID) {
-        self.add(id as u32)
+        #[allow(clippy::cast_possible_truncation)]
+        self.add(id as u32);
     }
 
     fn iter_elems(&self) -> impl Iterator<Item = ID> {
+        #[allow(clippy::cast_lossless)]
         self.iter().map(|x| x as ID)
     }
 
     fn and_not(&mut self, rhs: &Self) {
-        self.andnot_inplace(rhs)
+        self.andnot_inplace(rhs);
     }
 
     fn or(&mut self, rhs: &Self) {
-        self.or_inplace(rhs)
+        self.or_inplace(rhs);
     }
 
     fn xor(&mut self, rhs: &Self) {
-        self.xor_inplace(rhs)
+        self.xor_inplace(rhs);
     }
 
     fn estimate_size(&self) -> usize {

@@ -19,28 +19,38 @@ pub struct VectorStore<E: VectorBackend, B: Bitmap> {
 }
 
 impl<E: VectorBackend> VectorStore<E, crate::bitmaps::CRoaringBitmap> {
+    /// # Errors
+    /// loading bases and bitmaps from backend can fail
     pub fn new(backend: E) -> Result<Self> {
         VectorStore::new_vector_store(backend)
     }
 
+    /// # Errors
+    /// loading bases and bitmaps from backend can fail
     pub fn new_croaring_bitmap(backend: E) -> Result<Self> {
         VectorStore::new_vector_store(backend)
     }
 }
 
 impl<E: VectorBackend> VectorStore<E, crate::bitmaps::RoaringBitmap> {
+    /// # Errors
+    /// loading bases and bitmaps from backend can fail
     pub fn new_roaring_bitmap(backend: E) -> Result<Self> {
         VectorStore::new_vector_store(backend)
     }
 }
 
 impl<E: VectorBackend> VectorStore<E, crate::bitmaps::BitVec> {
+    /// # Errors
+    /// loading bases and bitmaps from backend can fail
     pub fn new_bitvec_bitmap(backend: E) -> Result<Self> {
         VectorStore::new_vector_store(backend)
     }
 }
 
 impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
+    /// # Errors
+    /// loading bases and bitmaps from backend can fail
     pub fn new_vector_store(mut backend: E) -> Result<Self> {
         let info = backend.info();
         let bases = match backend.load_bases()? {
@@ -57,11 +67,16 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
         Ok(out)
     }
 
+    /// # Errors
+    /// `put_vector` can fail for the backend as can `add_to_bitmaps`
+    #[allow(clippy::inline_always)]
     #[inline(always)]
     pub fn add_vector(&mut self, id: ID, vector: &Vector) -> Result<()> {
         self.add_vector_iter(vec![(id, vector)].into_iter())
     }
 
+    /// # Errors
+    /// `put_vector` can fail for the backend as can `add_to_bitmaps`
     pub fn add_vector_iter<'a>(
         &mut self,
         iter: impl Iterator<Item = (ID, &'a Vector)>,
@@ -73,6 +88,8 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
         Ok(())
     }
 
+    /// # Errors
+    /// finding a counting layer or `compute_similarity` can fail
     pub fn find_nearest(
         &self,
         target: &Vector,
@@ -88,6 +105,9 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
         self.find_nearest_internal(target, k, search_k, sp)
     }
 
+    /// # Errors
+    /// finding a counting layer or `compute_similarity` can fail
+    #[allow(clippy::inline_always)]
     #[inline(always)]
     fn find_nearest_internal(
         &self,
@@ -103,9 +123,9 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
             let mut spill_into = B::new();
             proj.clear();
             for b in basis {
-                proj.push(dot_product(target, b))
+                proj.push(dot_product(target, b));
             }
-            for _s in 0..(spill + 1) {
+            for _s in 0..=spill {
                 let face_idx = find_face_idx(&proj);
                 if let Some(bm) = self.bitmaps[i].get(&face_idx) {
                     spill_into.or(bm);
@@ -124,7 +144,9 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
         Ok(rs)
     }
 
-    #[allow(unused)]
+    /// # Errors
+    /// no actual error as of now
+    #[allow(unused, clippy::unnecessary_wraps)]
     fn add_to_bitmaps(&mut self, id: ID, vec: &Vector) -> Result<()> {
         let mut proj = Vec::with_capacity(self.dimensions);
         for (bi, basis) in self.bases.iter().enumerate() {
@@ -138,11 +160,14 @@ impl<E: VectorBackend, B: Bitmap> VectorStore<E, B> {
         Ok(())
     }
 
+    /// # Errors
+    /// `find_nearest` can fail because `compute_similarity` can fail
     pub fn full_table_scan(&self, vec: &Vector, k: usize) -> Result<ResultSet> {
         self.backend.find_nearest(vec, k)
     }
 }
 
+#[allow(clippy::unnecessary_wraps, clippy::similar_names)]
 fn make_basis(n_basis: usize, dimensions: usize) -> Result<Vec<Basis>> {
     let mut bases = Vec::<Basis>::with_capacity(n_basis);
     for _n in 0..n_basis {
@@ -189,6 +214,7 @@ fn load_all_bitmaps<B: Bitmap>(be: &mut impl VectorBackend) -> Result<Vec<HashMa
     for i in 0..info.n_basis {
         let mut hm = HashMap::<i32, B>::new();
         for x in 0..info.dimensions {
+            #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
             let index = x as i32;
             let bit = be.load_bitmap::<B>(i, index)?;
             if let Some(bitmap) = bit {
@@ -203,19 +229,22 @@ fn load_all_bitmaps<B: Bitmap>(be: &mut impl VectorBackend) -> Result<Vec<HashMa
                 hm.insert(-index, B::default());
             }
         }
-        out.push(hm)
+        out.push(hm);
     }
     Ok(out)
 }
 
+#[allow(clippy::inline_always)]
 #[inline(always)]
 fn find_face_idx(projection: &Vector) -> i32 {
     let (min_idx, max_idx) = projection.argminmax();
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     let idx = if projection[max_idx].abs() >= projection[min_idx].abs() {
         max_idx as i32
     } else {
         min_idx as i32
     };
+    #[allow(clippy::cast_sign_loss)]
     if projection[idx as usize] > 0.0 {
         idx + 1
     } else {
